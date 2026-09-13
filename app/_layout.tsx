@@ -10,6 +10,7 @@ import { useEffect } from 'react';
 import 'react-native-reanimated';
 
 import { useColorScheme } from '@/components/useColorScheme';
+import { AppLockProvider, AppLockScreen, useAppLock } from '@/src/modules/auth/app-lock';
 import { SessionProvider, useSession } from '@/src/modules/auth/session-context';
 
 export { ErrorBoundary } from 'expo-router';
@@ -41,14 +42,17 @@ export default function RootLayout() {
 
   return (
     <SessionProvider>
-      <RootLayoutNav />
+      <AppLockProvider>
+        <RootLayoutNav />
+      </AppLockProvider>
     </SessionProvider>
   );
 }
 
 function RootLayoutNav() {
   const colorScheme = useColorScheme();
-  const { session, loading } = useSession();
+  const { session, loading, pendingPasswordReset } = useSession();
+  const appLock = useAppLock();
   const segments = useSegments();
   const router = useRouter();
 
@@ -56,24 +60,36 @@ function RootLayoutNav() {
     if (loading) return;
 
     const onSignIn = segments[0] === 'sign-in';
+    const onReset = segments[0] === 'reset-password';
 
-    if (!session && !onSignIn) {
+    if (pendingPasswordReset && !onReset) {
+      router.replace('/reset-password');
+      return;
+    }
+    if (!session && !onSignIn && !onReset) {
       router.replace('/sign-in');
-    } else if (session && onSignIn) {
+    } else if (session && !pendingPasswordReset && (onSignIn || onReset)) {
       router.replace('/(tabs)');
     }
-  }, [session, loading, segments, router]);
+  }, [session, loading, pendingPasswordReset, segments, router]);
+
+  const holdForLock = Boolean(session) && !appLock.ready;
 
   return (
     <ThemeProvider value={colorScheme === 'dark' ? DarkTheme : DefaultTheme}>
-      <Stack>
-        <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
-        <Stack.Screen name="sign-in" options={{ headerShown: false }} />
-        <Stack.Screen
-          name="process/[id]"
-          options={{ title: 'Process', headerBackTitle: 'Library' }}
-        />
-      </Stack>
+      {holdForLock ? null : appLock.locked ? (
+        <AppLockScreen />
+      ) : (
+        <Stack>
+          <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
+          <Stack.Screen name="sign-in" options={{ headerShown: false }} />
+          <Stack.Screen name="reset-password" options={{ headerShown: false }} />
+          <Stack.Screen
+            name="process/[id]"
+            options={{ title: 'Process', headerBackTitle: 'Library' }}
+          />
+        </Stack>
+      )}
     </ThemeProvider>
   );
 }

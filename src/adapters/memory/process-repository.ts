@@ -23,8 +23,16 @@ export function createMemoryProcessRepository(): ProcessRepository {
   return {
     async listProcesses(ownerId: UserId) {
       return [...processes.values()]
-        .filter((p) => p.ownerId === ownerId)
-        .sort((a, b) => b.updatedAt.localeCompare(a.updatedAt));
+        .filter((p) => p.ownerId === ownerId && p.deletedAt === null && p.archivedAt === null)
+        .sort((a, b) => {
+          if (a.pinnedAt && !b.pinnedAt) return -1;
+          if (!a.pinnedAt && b.pinnedAt) return 1;
+          if (a.pinnedAt && b.pinnedAt) {
+            const byPin = b.pinnedAt.localeCompare(a.pinnedAt);
+            if (byPin !== 0) return byPin;
+          }
+          return b.updatedAt.localeCompare(a.updatedAt);
+        });
     },
 
     async getProcess(processId) {
@@ -36,8 +44,13 @@ export function createMemoryProcessRepository(): ProcessRepository {
       const process: Process = {
         id: id('proc'),
         ownerId: input.ownerId,
+        createdBy: input.ownerId,
+        updatedBy: input.ownerId,
         title: input.title,
         notes: input.notes ?? '',
+        pinnedAt: null,
+        archivedAt: null,
+        deletedAt: null,
         createdAt: timestamp,
         updatedAt: timestamp,
       };
@@ -66,20 +79,32 @@ export function createMemoryProcessRepository(): ProcessRepository {
 
     async listSteps(processId) {
       return [...steps.values()]
-        .filter((s) => s.processId === processId)
-        .sort((a, b) => a.position - b.position);
+        .filter((s) => s.processId === processId && s.deletedAt === null)
+        .sort((a, b) => a.position.localeCompare(b.position) || a.id.localeCompare(b.id));
     },
 
     async createStep(input: CreateStepInput) {
+      const timestamp = nowIso();
       const siblings = [...steps.values()].filter((s) => s.processId === input.processId);
-      const position = input.position ?? siblings.length;
+      const last = siblings.map((s) => s.position).sort().at(-1);
+      const position = input.position ?? (last ? `${last}0` : 'a0');
+      const process = processes.get(input.processId);
       const step: Step = {
         id: id('step'),
         processId: input.processId,
+        ownerId: process?.ownerId ?? '',
+        createdBy: process?.ownerId ?? null,
+        updatedBy: process?.ownerId ?? null,
         position,
+        kind: 'action',
+        optional: false,
         body: input.body,
         notes: input.notes ?? '',
+        url: null,
         childProcessId: input.childProcessId ?? null,
+        deletedAt: null,
+        createdAt: timestamp,
+        updatedAt: timestamp,
       };
       steps.set(step.id, step);
       return step;
@@ -95,6 +120,11 @@ export function createMemoryProcessRepository(): ProcessRepository {
 
     async deleteStep(stepId) {
       steps.delete(stepId);
+    },
+
+    async clearLocal() {
+      processes.clear();
+      steps.clear();
     },
   };
 }

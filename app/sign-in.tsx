@@ -13,24 +13,45 @@ import Colors from '@/constants/Colors';
 import { useColorScheme } from '@/components/useColorScheme';
 import { useSession } from '@/src/modules/auth/session-context';
 
+type Mode = 'sign-in' | 'sign-up' | 'forgot';
+
 export default function SignInScreen() {
   const colorScheme = useColorScheme();
   const colors = Colors[colorScheme];
-  const { signInWithPassword, signUpWithPassword } = useSession();
+  const { signInWithPassword, signUpWithPassword, requestPasswordReset } = useSession();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
-  const [mode, setMode] = useState<'sign-in' | 'sign-up'>('sign-in');
+  const [mode, setMode] = useState<Mode>('sign-in');
   const [error, setError] = useState<string | null>(null);
+  const [notice, setNotice] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
+
+  const needsPassword = mode !== 'forgot';
+  const canSubmit = Boolean(email.trim()) && (!needsPassword || Boolean(password)) && !busy;
+
+  function switchMode(next: Mode) {
+    setMode(next);
+    setError(null);
+    setNotice(null);
+  }
 
   async function onSubmit() {
     setError(null);
+    setNotice(null);
     setBusy(true);
     try {
       if (mode === 'sign-in') {
         await signInWithPassword(email.trim(), password);
+      } else if (mode === 'sign-up') {
+        const result = await signUpWithPassword(email.trim(), password);
+        if (result.status === 'confirm-email') {
+          setPassword('');
+          setMode('sign-in');
+          setNotice('Check your email to confirm this account, then sign in.');
+        }
       } else {
-        await signUpWithPassword(email.trim(), password);
+        await requestPasswordReset(email.trim());
+        setNotice('If an account exists for that email, we sent a reset link.');
       }
     } catch (e) {
       setError(e instanceof Error ? e.message : 'Something went wrong');
@@ -39,15 +60,21 @@ export default function SignInScreen() {
     }
   }
 
+  const title = mode === 'forgot' ? 'Reset password' : 'Reckoner';
+  const lede =
+    mode === 'forgot'
+      ? 'We will email a link to choose a new password.'
+      : 'Sign in to manage your processes.';
+  const submitLabel =
+    mode === 'sign-in' ? 'Sign in' : mode === 'sign-up' ? 'Create account' : 'Send reset link';
+
   return (
     <KeyboardAvoidingView
       style={[styles.screen, { backgroundColor: colors.background }]}
       behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
       <View style={styles.inner}>
-        <Text style={[styles.brand, { color: colors.text }]}>Reckoner</Text>
-        <Text style={[styles.lede, { color: colors.textSecondary }]}>
-          Sign in to manage your processes. Local memory auth for now — Supabase next.
-        </Text>
+        <Text style={[styles.brand, { color: colors.text }]}>{title}</Text>
+        <Text style={[styles.lede, { color: colors.textSecondary }]}>{lede}</Text>
 
         <TextInput
           value={email}
@@ -63,41 +90,49 @@ export default function SignInScreen() {
             { backgroundColor: colors.surface, borderColor: colors.border, color: colors.text },
           ]}
         />
-        <TextInput
-          value={password}
-          onChangeText={setPassword}
-          placeholder="Password"
-          placeholderTextColor={colors.textSecondary}
-          secureTextEntry
-          textContentType={mode === 'sign-up' ? 'newPassword' : 'password'}
-          style={[
-            styles.input,
-            { backgroundColor: colors.surface, borderColor: colors.border, color: colors.text },
-          ]}
-        />
+        {needsPassword ? (
+          <TextInput
+            value={password}
+            onChangeText={setPassword}
+            placeholder="Password"
+            placeholderTextColor={colors.textSecondary}
+            secureTextEntry
+            textContentType={mode === 'sign-up' ? 'newPassword' : 'password'}
+            style={[
+              styles.input,
+              { backgroundColor: colors.surface, borderColor: colors.border, color: colors.text },
+            ]}
+          />
+        ) : null}
 
+        {notice ? <Text style={[styles.notice, { color: colors.text }]}>{notice}</Text> : null}
         {error ? <Text style={styles.error}>{error}</Text> : null}
 
         <Pressable
-          onPress={onSubmit}
-          disabled={busy || !email.trim() || !password}
+          onPress={() => void onSubmit()}
+          disabled={!canSubmit}
           style={({ pressed }) => [
             styles.primary,
-            {
-              backgroundColor: colors.tint,
-              opacity: pressed || busy || !email.trim() || !password ? 0.7 : 1,
-            },
+            { backgroundColor: colors.tint, opacity: pressed || !canSubmit ? 0.7 : 1 },
           ]}>
-          <Text style={styles.primaryLabel}>
-            {busy ? 'Working…' : mode === 'sign-in' ? 'Sign in' : 'Create account'}
-          </Text>
+          <Text style={styles.primaryLabel}>{busy ? 'Working…' : submitLabel}</Text>
         </Pressable>
 
+        {mode === 'sign-in' ? (
+          <Pressable onPress={() => switchMode('forgot')} style={styles.switchMode}>
+            <Text style={{ color: colors.tint, fontWeight: '600' }}>Forgot password?</Text>
+          </Pressable>
+        ) : null}
+
         <Pressable
-          onPress={() => setMode(mode === 'sign-in' ? 'sign-up' : 'sign-in')}
+          onPress={() => switchMode(mode === 'sign-up' ? 'sign-in' : mode === 'forgot' ? 'sign-in' : 'sign-up')}
           style={styles.switchMode}>
           <Text style={{ color: colors.tint, fontWeight: '600' }}>
-            {mode === 'sign-in' ? 'Need an account? Sign up' : 'Have an account? Sign in'}
+            {mode === 'sign-up'
+              ? 'Have an account? Sign in'
+              : mode === 'forgot'
+                ? 'Back to sign in'
+                : 'Need an account? Sign up'}
           </Text>
         </Pressable>
       </View>
@@ -124,6 +159,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   primaryLabel: { color: '#fff', fontSize: 16, fontWeight: '600' },
-  switchMode: { alignItems: 'center', paddingVertical: 12 },
-  error: { color: '#B91C1C', fontSize: 14 },
+  switchMode: { alignItems: 'center', paddingVertical: 8 },
+  notice: { fontSize: 14, lineHeight: 20 },
+  error: { color: '#B91C1C', fontSize: 14, lineHeight: 20 },
 });

@@ -11,6 +11,7 @@ export default {
     tabIconDefault: '#A8A29E',
     tabIconSelected: tint,
     border: '#E7E5E4',
+    danger: '#B91C1C',
   },
   dark: {
     text: '#FAFAF9',
@@ -21,5 +22,6 @@ export default {
     tabIconDefault: '#78716C',
     tabIconSelected: '#2DD4BF',
     border: '#44403C',
+    danger: '#F87171',
   },
 };

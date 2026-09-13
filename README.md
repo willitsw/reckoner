@@ -16,7 +16,7 @@ npm run start
 
 Then press `i` (iOS simulator), `w` (web), or scan with Expo Go.
 
-Sign in with any email/password — **memory auth** until Supabase is wired. Copy [`.env.example`](./.env.example) to `.env` when you have a project.
+Sign in with email/password against **Supabase** when `.env` has keys; otherwise memory auth. Copy [`.env.example`](./.env.example) to `.env`.
 
 ```bash
 npm run typecheck
@@ -33,11 +33,12 @@ If Metro crashes with `availableParallelism is not a function`, the process is o
 | `src/adapters/` | Memory / Expo / Supabase implementations |
 | `src/di/` | Composition root |
 | `src/modules/` | Feature helpers (e.g. session) |
+| `supabase/migrations/` | Postgres schema (RLS, includes, runs, media bucket) |
 
 ## Next build slices
 
 1. Supabase Auth adapter (email, Google, Apple)
-2. Postgres schema + RLS + PowerSync
+2. PowerSync (schema + RLS are in `supabase/migrations/`)
 3. Nesting (live include + cycle guard)
 4. Run / checkbox + inline expand
 5. Media queue + offline harden

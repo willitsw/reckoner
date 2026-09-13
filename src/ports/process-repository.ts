@@ -11,7 +11,7 @@ export type CreateStepInput = {
   body: string;
   notes?: string;
   childProcessId?: ProcessId | null;
-  position?: number;
+  position?: string;
 };
 
 /**
@@ -34,4 +34,7 @@ export interface ProcessRepository {
     patch: Partial<Pick<Step, 'body' | 'notes' | 'position' | 'childProcessId'>>,
   ): Promise<Step>;
   deleteStep(id: string): Promise<void>;
+
+  /** Drops this device's copy. Does not delete the cloud library. */
+  clearLocal(): Promise<void>;
 }
