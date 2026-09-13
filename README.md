@@ -19,8 +19,11 @@ Then press `i` (iOS simulator), `w` (web), or scan with Expo Go.
 Sign in with email/password against **Supabase** when `.env` has keys; otherwise memory auth. Copy [`.env.example`](./.env.example) to `.env`.
 
 ```bash
+npm test
 npm run typecheck
 ```
+
+`npm test` covers the account port (name, delete, local wipe) through the memory adapters. It also runs on commit (`npm install` installs the hook). Profile isolation and `delete_own_account` are pgTAP tests in `supabase/tests/database/`; run those with `supabase test db` once local Supabase is up.
 
 If Metro crashes with `availableParallelism is not a function`, the process is on an old Node — run `node -v` in that same terminal and `nvm use` (or upgrade Node), then restart.
 ## Layout

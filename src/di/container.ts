@@ -6,6 +6,7 @@ import { createMemoryProcessRepository } from '@/src/adapters/memory/process-rep
 import { createSupabaseAccountAdapter } from '@/src/adapters/supabase/account';
 import { createSupabaseAuthAdapter } from '@/src/adapters/supabase/auth';
 import { createSupabaseClient } from '@/src/adapters/supabase/client';
+import { withLocalWipe } from '@/src/modules/account/with-local-wipe';
 import type { AccountPort } from '@/src/ports/account';
 import type { AuthPort } from '@/src/ports/auth';
 import type { BiometricPort } from '@/src/ports/biometric';
@@ -23,16 +24,6 @@ export type AppContainer = {
 };
 
 let container: AppContainer | null = null;
-
-function withLocalWipe(account: AccountPort, processes: ProcessRepository): AccountPort {
-  return {
-    ...account,
-    async deleteAccount() {
-      await account.deleteAccount();
-      await processes.clearLocal();
-    },
-  };
-}
 
 /**
  * Composition root. Auth uses Supabase when env is set; other ports stay memory for now.

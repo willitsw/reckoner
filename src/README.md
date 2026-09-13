@@ -10,4 +10,4 @@ Application code. Expo Router screens in `/app` stay thin and call into modules 
 | `di/` | Composition root — wire adapters once |
 | `modules/` | Feature UI helpers and screens' logic |
 
-See root `AGENTS.md`: ports over vendors; mock only externals in tests.
+See root `AGENTS.md`: ports over vendors; mock only externals in tests. App-level tests live in `/tests` and talk to ports. Database tests live in `/supabase/tests/database`.
