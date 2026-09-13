@@ -12,6 +12,7 @@ import { Text } from '@/components/Themed';
 import Colors from '@/constants/Colors';
 import { useColorScheme } from '@/components/useColorScheme';
 import { getContainer } from '@/src/di/container';
+import { processTitle } from '@/src/domain/process-title';
 import type { Process } from '@/src/domain/types';
 import { useSession } from '@/src/modules/auth/session-context';
 
@@ -23,12 +24,16 @@ export default function LibraryScreen() {
   const [processes, setProcesses] = useState<Process[]>([]);
   const [query, setQuery] = useState('');
   const [creating, setCreating] = useState(false);
+  const [showArchived, setShowArchived] = useState(false);
 
   const load = useCallback(async () => {
     if (!session) return;
-    const list = await getContainer().processes.listProcesses(session.user.id);
+    const repo = getContainer().processes;
+    const list = showArchived
+      ? await repo.listArchivedProcesses(session.user.id)
+      : await repo.listProcesses(session.user.id);
     setProcesses(list);
-  }, [session]);
+  }, [session, showArchived]);
 
   useFocusEffect(
     useCallback(() => {
@@ -37,7 +42,7 @@ export default function LibraryScreen() {
   );
 
   const filtered = processes.filter((p) =>
-    p.title.toLowerCase().includes(query.trim().toLowerCase()),
+    processTitle(p.title).toLowerCase().includes(query.trim().toLowerCase()),
   );
 
   async function onCreate() {
@@ -67,7 +72,7 @@ export default function LibraryScreen() {
       <TextInput
         value={query}
         onChangeText={setQuery}
-        placeholder="Search processes"
+        placeholder={showArchived ? 'Search archived' : 'Search processes'}
         placeholderTextColor={colors.textSecondary}
         style={[
           styles.search,
@@ -82,6 +87,14 @@ export default function LibraryScreen() {
         clearButtonMode="while-editing"
       />
 
+      <Pressable
+        onPress={() => setShowArchived((current) => !current)}
+        style={styles.archiveToggle}>
+        <Text style={{ color: colors.tint, fontWeight: '600' }}>
+          {showArchived ? 'Back to library' : 'Archived'}
+        </Text>
+      </Pressable>
+
       <FlatList
         data={filtered}
         keyExtractor={(item) => item.id}
@@ -90,10 +103,13 @@ export default function LibraryScreen() {
         }
         ListEmptyComponent={
           <View style={styles.empty}>
-            <Text style={[styles.emptyTitle, { color: colors.text }]}>No processes yet</Text>
+            <Text style={[styles.emptyTitle, { color: colors.text }]}>
+              {showArchived ? 'Nothing archived' : 'No processes yet'}
+            </Text>
             <Text style={[styles.emptyBody, { color: colors.textSecondary }]}>
-              Create a process for a hobby workflow you repeat. Nest other processes by
-              live reference as you go.
+              {showArchived
+                ? 'Archived processes stay out of the library. You can still include them later.'
+                : 'Create a process for a hobby workflow you repeat. Nest other processes by live reference as you go.'}
             </Text>
           </View>
         }
@@ -108,20 +124,25 @@ export default function LibraryScreen() {
                 opacity: pressed ? 0.7 : 1,
               },
             ]}>
-            <Text style={[styles.rowTitle, { color: colors.text }]}>{item.title}</Text>
+            <Text style={[styles.rowTitle, { color: colors.text }]}>{processTitle(item.title)}</Text>
+            {item.pinnedAt ? (
+              <Text style={[styles.pin, { color: colors.textSecondary }]}>Pinned</Text>
+            ) : null}
           </Pressable>
         )}
       />
 
-      <Pressable
-        onPress={onCreate}
-        disabled={creating}
-        style={({ pressed }) => [
-          styles.fab,
-          { backgroundColor: colors.tint, opacity: pressed || creating ? 0.8 : 1 },
-        ]}>
-        <Text style={styles.fabLabel}>{creating ? 'Creating…' : 'New process'}</Text>
-      </Pressable>
+      {showArchived ? null : (
+        <Pressable
+          onPress={onCreate}
+          disabled={creating}
+          style={({ pressed }) => [
+            styles.fab,
+            { backgroundColor: colors.tint, opacity: pressed || creating ? 0.8 : 1 },
+          ]}>
+          <Text style={styles.fabLabel}>{creating ? 'Creating…' : 'New process'}</Text>
+        </Pressable>
+      )}
     </View>
   );
 }
@@ -151,6 +172,8 @@ const styles = StyleSheet.create({
     paddingVertical: 16,
   },
   rowTitle: { fontSize: 17, fontWeight: '600' },
+  pin: { fontSize: 13, marginTop: 4 },
+  archiveToggle: { alignSelf: 'flex-start', marginBottom: 12 },
   fab: {
     position: 'absolute',
     right: 20,

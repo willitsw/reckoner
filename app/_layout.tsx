@@ -88,6 +88,7 @@ function RootLayoutNav() {
             name="process/[id]"
             options={{ title: 'Process', headerBackTitle: 'Library' }}
           />
+          <Stack.Screen name="run/[id]" options={{ title: 'Run' }} />
         </Stack>
       )}
     </ThemeProvider>
