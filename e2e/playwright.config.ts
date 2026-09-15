@@ -19,13 +19,16 @@ export default defineConfig({
   },
   projects: [{ name: 'chromium', use: { ...devices['Desktop Chrome'] } }],
   webServer: {
+    // npm scripts run from the repo root; Playwright's config dir is e2e/.
     command: `npx expo start --web --port ${port}`,
+    cwd: process.cwd(),
     url: baseURL,
     reuseExistingServer: !process.env.CI,
     timeout: 180_000,
     env: {
       ...process.env,
       CI: '1',
+      EXPO_NO_TELEMETRY: '1',
       EXPO_PUBLIC_SUPABASE_URL: '',
       EXPO_PUBLIC_SUPABASE_ANON_KEY: '',
     },

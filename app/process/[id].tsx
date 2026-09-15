@@ -1,4 +1,4 @@
-import { useCallback, useState } from 'react';
+import { useCallback, useRef, useState } from 'react';
 import {
   Pressable,
   ScrollView,
@@ -40,14 +40,22 @@ export default function ProcessDetailScreen() {
   const [confirmingDelete, setConfirmingDelete] = useState(false);
   const [ready, setReady] = useState(false);
   const [hasRun, setHasRun] = useState(false);
+  // react-native-web does not implement onEndEditing; persist on blur via refs
+  // so Playwright (and fast blur after typing) does not save a stale value.
+  const titleRef = useRef(title);
+  const notesRef = useRef(notes);
 
   const load = useCallback(async () => {
     if (!id) return;
     const repo = getContainer().processes;
     const loaded = await repo.getProcess(id);
     setProcess(loaded);
-    setTitle(loaded?.title ?? '');
-    setNotes(loaded?.notes ?? '');
+    const nextTitle = loaded?.title ?? '';
+    const nextNotes = loaded?.notes ?? '';
+    titleRef.current = nextTitle;
+    notesRef.current = nextNotes;
+    setTitle(nextTitle);
+    setNotes(nextNotes);
     const nextSteps = loaded && !loaded.deletedAt ? await repo.listSteps(loaded.id) : [];
     const childIds = [
       ...new Set(nextSteps.flatMap((step) => (step.childProcessId ? [step.childProcessId] : []))),
@@ -62,7 +70,6 @@ export default function ProcessDetailScreen() {
     setHasRun(loaded ? (await getContainer().runs.getInProgressRun(loaded.id)) !== null : false);
     setReady(true);
   }, [id]);
-
   useFocusEffect(
     useCallback(() => {
       void load();
@@ -104,9 +111,16 @@ export default function ProcessDetailScreen() {
         <TextInput
           testID="process-title"
           value={title}
-          onChangeText={setTitle}
-          onEndEditing={() =>
-            void run(() => getContainer().processes.updateProcess(process.id, { title: title.trim() }))
+          onChangeText={(next) => {
+            titleRef.current = next;
+            setTitle(next);
+          }}
+          onBlur={() =>
+            void run(() =>
+              getContainer().processes.updateProcess(process.id, {
+                title: titleRef.current.trim(),
+              }),
+            )
           }
           placeholder="Untitled"
           placeholderTextColor={colors.textSecondary}
@@ -115,9 +129,16 @@ export default function ProcessDetailScreen() {
         <TextInput
           testID="process-notes"
           value={notes}
-          onChangeText={setNotes}
-          onEndEditing={() =>
-            void run(() => getContainer().processes.updateProcess(process.id, { notes }))
+          onChangeText={(next) => {
+            notesRef.current = next;
+            setNotes(next);
+          }}
+          onBlur={() =>
+            void run(() =>
+              getContainer().processes.updateProcess(process.id, {
+                notes: notesRef.current,
+              }),
+            )
           }
           placeholder="Notes for this process"
           placeholderTextColor={colors.textSecondary}
@@ -349,6 +370,12 @@ function StepCard({
   const [body, setBody] = useState(step.body);
   const [notes, setNotes] = useState(step.notes);
   const [url, setUrl] = useState(step.url ?? '');
+  const bodyRef = useRef(body);
+  const notesRef = useRef(notes);
+  const urlRef = useRef(url);
+  bodyRef.current = body;
+  notesRef.current = notes;
+  urlRef.current = url;
 
   return (
     <View
@@ -379,24 +406,33 @@ function StepCard({
       <TextInput
         testID={`step-body-${step.id}`}
         value={body}
-        onChangeText={setBody}
-        onEndEditing={() => onChange({ body })}
+        onChangeText={(next) => {
+          bodyRef.current = next;
+          setBody(next);
+        }}
+        onBlur={() => onChange({ body: bodyRef.current })}
         placeholder={step.kind === 'heading' ? 'Heading' : step.kind === 'note' ? 'Note' : 'Step'}
         placeholderTextColor={colors.textSecondary}
         style={[styles.bodyInput, { color: colors.text, borderBottomColor: colors.border }]}
       />
       <TextInput
         value={notes}
-        onChangeText={setNotes}
-        onEndEditing={() => onChange({ notes })}
+        onChangeText={(next) => {
+          notesRef.current = next;
+          setNotes(next);
+        }}
+        onBlur={() => onChange({ notes: notesRef.current })}
         placeholder="Notes"
         placeholderTextColor={colors.textSecondary}
         style={[styles.field, { color: colors.text, borderColor: colors.border }]}
       />
       <TextInput
         value={url}
-        onChangeText={setUrl}
-        onEndEditing={() => onChange({ url })}
+        onChangeText={(next) => {
+          urlRef.current = next;
+          setUrl(next);
+        }}
+        onBlur={() => onChange({ url: urlRef.current })}
         placeholder="Link (https://)"
         placeholderTextColor={colors.textSecondary}
         autoCapitalize="none"
