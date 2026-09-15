@@ -61,7 +61,7 @@ export default function LibraryScreen() {
   }
 
   return (
-    <View style={[styles.screen, { backgroundColor: colors.background }]}>
+    <View testID="library-screen" style={[styles.screen, { backgroundColor: colors.background }]}>
       <View style={styles.headerBlock}>
         <Text style={[styles.brand, { color: colors.text }]}>Reckoner</Text>
         <Text style={[styles.subtitle, { color: colors.textSecondary }]}>
@@ -70,6 +70,7 @@ export default function LibraryScreen() {
       </View>
 
       <TextInput
+        testID="library-search"
         value={query}
         onChangeText={setQuery}
         placeholder={showArchived ? 'Search archived' : 'Search processes'}
@@ -88,6 +89,7 @@ export default function LibraryScreen() {
       />
 
       <Pressable
+        testID="library-archive-toggle"
         onPress={() => setShowArchived((current) => !current)}
         style={styles.archiveToggle}>
         <Text style={{ color: colors.tint, fontWeight: '600' }}>
@@ -96,13 +98,14 @@ export default function LibraryScreen() {
       </Pressable>
 
       <FlatList
+        testID="library-list"
         data={filtered}
         keyExtractor={(item) => item.id}
         contentContainerStyle={
           filtered.length === 0 ? styles.emptyList : styles.listContent
         }
         ListEmptyComponent={
-          <View style={styles.empty}>
+          <View testID="library-empty" style={styles.empty}>
             <Text style={[styles.emptyTitle, { color: colors.text }]}>
               {showArchived ? 'Nothing archived' : 'No processes yet'}
             </Text>
@@ -115,6 +118,8 @@ export default function LibraryScreen() {
         }
         renderItem={({ item }) => (
           <Pressable
+            testID={`process-row-${item.id}`}
+            accessibilityLabel={processTitle(item.title)}
             onPress={() => router.push(`/process/${item.id}`)}
             style={({ pressed }) => [
               styles.row,
@@ -134,6 +139,7 @@ export default function LibraryScreen() {
 
       {showArchived ? null : (
         <Pressable
+          testID="library-new-process"
           onPress={onCreate}
           disabled={creating}
           style={({ pressed }) => [

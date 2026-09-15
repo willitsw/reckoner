@@ -1,0 +1,45 @@
+# Full native smoke: sign in → create process → run a step → sign out.
+# Requires Maestro CLI + a simulator/emulator with the app (Expo Go or dev build).
+appId: ${MAESTRO_APP_ID}
+---
+- runFlow: flows/sign-in.yaml
+- assertVisible:
+    id: "library-empty"
+- tapOn:
+    id: "library-new-process"
+- assertVisible:
+    id: "process-screen"
+- tapOn:
+    id: "process-title"
+- eraseText
+- inputText: "Pack camera"
+- hideKeyboard
+- tapOn:
+    id: "process-new-step"
+- inputText: "Charge batteries"
+- tapOn:
+    id: "process-add-step"
+- assertVisible: "Charge batteries"
+- tapOn:
+    id: "process-run"
+- assertVisible:
+    id: "run-screen"
+- assertVisible:
+    id: "run-progress"
+- tapOn: "Charge batteries"
+- assertVisible: "1 of 1"
+- back
+- back
+- assertVisible:
+    id: "library-screen"
+- tapOn:
+    id: "tab-account"
+- assertVisible:
+    id: "account-screen"
+- scrollUntilVisible:
+    element:
+      id: "account-sign-out"
+- tapOn:
+    id: "account-sign-out"
+- assertVisible:
+    id: "sign-in-screen"

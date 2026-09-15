@@ -21,9 +21,12 @@ Sign in with email/password against **Supabase** when `.env` has keys; otherwise
 ```bash
 npm test
 npm run typecheck
+npm run test:e2e:web
 ```
 
 `npm test` covers the account port (name, delete, local wipe) through the memory adapters. It also runs on commit (`npm install` installs the hook). Profile isolation and `delete_own_account` are pgTAP tests in `supabase/tests/database/`; run those with `supabase test db` once local Supabase is up.
+
+E2E: Playwright drives Expo web (`npm run test:e2e:web`). Maestro covers native (`npm run test:e2e:maestro` — needs the Maestro CLI + simulator). Details in [`e2e/README.md`](./e2e/README.md).
 
 If Metro crashes with `availableParallelism is not a function`, the process is on an old Node — run `node -v` in that same terminal and `nvm use` (or upgrade Node), then restart.
 ## Layout
@@ -37,6 +40,7 @@ If Metro crashes with `availableParallelism is not a function`, the process is o
 | `src/di/` | Composition root |
 | `src/modules/` | Feature helpers (e.g. session) |
 | `supabase/migrations/` | Postgres schema (RLS, includes, runs, media bucket) |
+| `e2e/` | Playwright (web) + Maestro (native) smoke harness |
 
 ## Next build slices
 

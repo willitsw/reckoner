@@ -70,6 +70,7 @@ export default function SignInScreen() {
 
   return (
     <KeyboardAvoidingView
+      testID="sign-in-screen"
       style={[styles.screen, { backgroundColor: colors.background }]}
       behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
       <View style={styles.inner}>
@@ -77,6 +78,7 @@ export default function SignInScreen() {
         <Text style={[styles.lede, { color: colors.textSecondary }]}>{lede}</Text>
 
         <TextInput
+          testID="sign-in-email"
           value={email}
           onChangeText={setEmail}
           placeholder="Email"
@@ -92,6 +94,7 @@ export default function SignInScreen() {
         />
         {needsPassword ? (
           <TextInput
+            testID="sign-in-password"
             value={password}
             onChangeText={setPassword}
             placeholder="Password"
@@ -106,9 +109,14 @@ export default function SignInScreen() {
         ) : null}
 
         {notice ? <Text style={[styles.notice, { color: colors.text }]}>{notice}</Text> : null}
-        {error ? <Text style={styles.error}>{error}</Text> : null}
+        {error ? (
+          <Text testID="sign-in-error" style={styles.error}>
+            {error}
+          </Text>
+        ) : null}
 
         <Pressable
+          testID="sign-in-submit"
           onPress={() => void onSubmit()}
           disabled={!canSubmit}
           style={({ pressed }) => [
@@ -119,12 +127,16 @@ export default function SignInScreen() {
         </Pressable>
 
         {mode === 'sign-in' ? (
-          <Pressable onPress={() => switchMode('forgot')} style={styles.switchMode}>
+          <Pressable
+            testID="sign-in-forgot"
+            onPress={() => switchMode('forgot')}
+            style={styles.switchMode}>
             <Text style={{ color: colors.tint, fontWeight: '600' }}>Forgot password?</Text>
           </Pressable>
         ) : null}
 
         <Pressable
+          testID="sign-in-switch-mode"
           onPress={() => switchMode(mode === 'sign-up' ? 'sign-in' : mode === 'forgot' ? 'sign-in' : 'sign-up')}
           style={styles.switchMode}>
           <Text style={{ color: colors.tint, fontWeight: '600' }}>

@@ -98,10 +98,11 @@ export default function ProcessDetailScreen() {
   const archived = process.archivedAt !== null;
 
   return (
-    <View style={[styles.screen, { backgroundColor: colors.background }]}>
+    <View testID="process-screen" style={[styles.screen, { backgroundColor: colors.background }]}>
       <Stack.Screen options={{ title: processTitle(title) }} />
       <ScrollView contentContainerStyle={styles.scroll} keyboardShouldPersistTaps="handled">
         <TextInput
+          testID="process-title"
           value={title}
           onChangeText={setTitle}
           onEndEditing={() =>
@@ -112,6 +113,7 @@ export default function ProcessDetailScreen() {
           style={[styles.titleInput, { color: colors.text, borderBottomColor: colors.border }]}
         />
         <TextInput
+          testID="process-notes"
           value={notes}
           onChangeText={setNotes}
           onEndEditing={() =>
@@ -128,6 +130,7 @@ export default function ProcessDetailScreen() {
 
         <View style={styles.toolbar}>
           <Pressable
+            testID="process-run"
             onPress={() => router.push(`/run/${process.id}`)}
             style={({ pressed }) => [
               styles.tool,
@@ -211,6 +214,7 @@ export default function ProcessDetailScreen() {
 
         <View style={styles.addRow}>
           <TextInput
+            testID="process-new-step"
             value={newStep}
             onChangeText={setNewStep}
             placeholder="New step"
@@ -228,6 +232,7 @@ export default function ProcessDetailScreen() {
             returnKeyType="done"
           />
           <Pressable
+            testID="process-add-step"
             onPress={() => {
               const body = newStep.trim();
               if (!body) return;
@@ -346,7 +351,9 @@ function StepCard({
   const [url, setUrl] = useState(step.url ?? '');
 
   return (
-    <View style={[styles.stepCard, { backgroundColor: colors.surface, borderColor: colors.border }]}>
+    <View
+      testID={`step-card-${step.id}`}
+      style={[styles.stepCard, { backgroundColor: colors.surface, borderColor: colors.border }]}>
       <View style={styles.kindRow}>
         {KINDS.map((option) => {
           const selected = step.kind === option.kind;
@@ -370,6 +377,7 @@ function StepCard({
       </View>
 
       <TextInput
+        testID={`step-body-${step.id}`}
         value={body}
         onChangeText={setBody}
         onEndEditing={() => onChange({ body })}
