@@ -51,3 +51,13 @@ export async function signIn(
   await byTestId(page, 'sign-in-submit').click();
   await expect(byTestId(page, 'library-screen')).toBeVisible();
 }
+
+/** Sign in, create a process, and set its title. Leaves you on the process screen. */
+export async function createNamedProcess(page: Page, title: string) {
+  await signIn(page);
+  await expect(byTestId(page, 'library-empty')).toBeVisible();
+  await byTestId(page, 'library-new-process').click();
+  await expect(byTestId(page, 'process-screen')).toBeVisible();
+  await typeInto(page, 'process-title', title);
+  await expect(byTestId(page, 'process-title')).toHaveValue(title);
+}

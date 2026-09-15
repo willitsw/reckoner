@@ -1,0 +1,29 @@
+# Delete a process after confirmation; it leaves the live and archived libraries.
+appId: ${MAESTRO_APP_ID}
+---
+- runFlow: flows/sign-in.yaml
+- assertVisible:
+    id: "library-empty"
+- tapOn:
+    id: "library-new-process"
+- assertVisible:
+    id: "process-screen"
+- tapOn:
+    id: "process-title"
+- eraseText
+- inputText: "Sourdough"
+- hideKeyboard
+- scrollUntilVisible:
+    element:
+      id: "process-delete"
+- tapOn:
+    id: "process-delete"
+- tapOn:
+    id: "process-delete-confirm"
+- assertVisible:
+    id: "library-screen"
+- assertVisible:
+    id: "library-empty"
+- tapOn:
+    id: "library-archive-toggle"
+- assertVisible: "Nothing archived"

@@ -161,6 +161,7 @@ export default function ProcessDetailScreen() {
           </Pressable>
           {archived ? (
             <Pressable
+              testID="process-unarchive"
               onPress={() => void run(() => getContainer().processes.unarchiveProcess(process.id))}
               style={({ pressed }) => [
                 styles.tool,
@@ -171,6 +172,7 @@ export default function ProcessDetailScreen() {
           ) : (
             <>
               <Pressable
+                testID="process-pin"
                 onPress={() =>
                   void run(() =>
                     process.pinnedAt
@@ -187,6 +189,7 @@ export default function ProcessDetailScreen() {
                 </Text>
               </Pressable>
               <Pressable
+                testID="process-archive"
                 onPress={() => void run(() => getContainer().processes.archiveProcess(process.id))}
                 style={({ pressed }) => [
                   styles.tool,
@@ -199,7 +202,9 @@ export default function ProcessDetailScreen() {
         </View>
 
         {archived ? (
-          <Text style={[styles.section, { color: colors.textSecondary }]}>
+          <Text
+            testID="process-archived-banner"
+            style={[styles.section, { color: colors.textSecondary }]}>
             Archived. It stays out of the library until you unarchive it.
           </Text>
         ) : null}
@@ -280,6 +285,7 @@ export default function ProcessDetailScreen() {
           <View style={styles.toolbar}>
             {confirmingDelete ? (
               <Pressable
+                testID="process-delete-cancel"
                 onPress={() => setConfirmingDelete(false)}
                 style={({ pressed }) => [
                   styles.tool,
@@ -289,6 +295,7 @@ export default function ProcessDetailScreen() {
               </Pressable>
             ) : null}
             <Pressable
+              testID={confirmingDelete ? 'process-delete-confirm' : 'process-delete'}
               onPress={() => {
                 if (!confirmingDelete) {
                   setConfirmingDelete(true);

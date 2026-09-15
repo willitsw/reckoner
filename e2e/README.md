@@ -36,3 +36,11 @@ Entry flow: `e2e/maestro/smoke.yaml` (shared steps in `e2e/maestro/flows/`). Wit
 1. Sign in → library
 2. Create process → rename → add step
 3. Run → check a step → sign out
+
+## Library lifecycle
+
+- `archive` — archive hides from library, shows under Archived, unarchive restores
+- `delete` — confirm delete removes from live and archived lists
+
+Playwright: `e2e/web/library-lifecycle.spec.ts`  
+Maestro: `e2e/maestro/archive.yaml`, `e2e/maestro/delete.yaml`
