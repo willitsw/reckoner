@@ -11,6 +11,7 @@ import {
 import { Text } from '@/components/Themed';
 import Colors from '@/constants/Colors';
 import { useColorScheme } from '@/components/useColorScheme';
+import { DEMO_EMAIL, DEMO_PASSWORD } from '@/src/dev/demo-credentials';
 import { useSession } from '@/src/modules/auth/session-context';
 
 type Mode = 'sign-in' | 'sign-up' | 'forgot';
@@ -25,6 +26,14 @@ export default function SignInScreen() {
   const [error, setError] = useState<string | null>(null);
   const [notice, setNotice] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
+
+  function useDemoAccount() {
+    setMode('sign-in');
+    setError(null);
+    setNotice(null);
+    setEmail(DEMO_EMAIL);
+    setPassword(DEMO_PASSWORD);
+  }
 
   const needsPassword = mode !== 'forgot';
   const canSubmit = Boolean(email.trim()) && (!needsPassword || Boolean(password)) && !busy;
@@ -147,6 +156,12 @@ export default function SignInScreen() {
                 : 'Need an account? Sign up'}
           </Text>
         </Pressable>
+
+        {__DEV__ ? (
+          <Pressable onPress={useDemoAccount} style={styles.switchMode}>
+            <Text style={{ color: colors.textSecondary, fontWeight: '600' }}>Use demo account</Text>
+          </Pressable>
+        ) : null}
       </View>
     </KeyboardAvoidingView>
   );

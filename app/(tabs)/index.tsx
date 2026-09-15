@@ -11,6 +11,7 @@ import { useFocusEffect, useRouter } from 'expo-router';
 import { Text } from '@/components/Themed';
 import Colors from '@/constants/Colors';
 import { useColorScheme } from '@/components/useColorScheme';
+import { seedDemoLibrary } from '@/src/dev/demo-library';
 import { getContainer } from '@/src/di/container';
 import { processTitle } from '@/src/domain/process-title';
 import type { Process } from '@/src/domain/types';
@@ -22,8 +23,10 @@ export default function LibraryScreen() {
   const { session } = useSession();
   const router = useRouter();
   const [processes, setProcesses] = useState<Process[]>([]);
+  const [inProgressIds, setInProgressIds] = useState<Set<string>>(() => new Set());
   const [query, setQuery] = useState('');
   const [creating, setCreating] = useState(false);
+  const [seeding, setSeeding] = useState(false);
   const [showArchived, setShowArchived] = useState(false);
 
   const load = useCallback(async () => {
@@ -32,7 +35,14 @@ export default function LibraryScreen() {
     const list = showArchived
       ? await repo.listArchivedProcesses(session.user.id)
       : await repo.listProcesses(session.user.id);
+    const running = await Promise.all(
+      list.map(async (process) => [
+        process.id,
+        (await getContainer().runs.getInProgressRun(process.id)) !== null,
+      ] as const),
+    );
     setProcesses(list);
+    setInProgressIds(new Set(running.filter(([, active]) => active).map(([processId]) => processId)));
   }, [session, showArchived]);
 
   useFocusEffect(
@@ -57,6 +67,17 @@ export default function LibraryScreen() {
       router.push(`/process/${created.id}`);
     } finally {
       setCreating(false);
+    }
+  }
+
+  async function onLoadDemoLibrary() {
+    if (!session || seeding) return;
+    setSeeding(true);
+    try {
+      await seedDemoLibrary(getContainer().processes, session.user.id);
+      await load();
+    } finally {
+      setSeeding(false);
     }
   }
 
@@ -114,27 +135,61 @@ export default function LibraryScreen() {
                 ? 'Archived processes stay out of the library. You can still include them later.'
                 : 'Create a process for a hobby workflow you repeat. Nest other processes by live reference as you go.'}
             </Text>
+            {__DEV__ && !showArchived ? (
+              <Pressable
+                testID="library-load-demo"
+                onPress={() => void onLoadDemoLibrary()}
+                disabled={seeding}
+                style={({ pressed }) => [
+                  styles.demoButton,
+                  {
+                    borderColor: colors.border,
+                    opacity: pressed || seeding ? 0.7 : 1,
+                  },
+                ]}>
+                <Text style={{ color: colors.tint, fontWeight: '600' }}>
+                  {seeding ? 'Loading demo…' : 'Load demo library'}
+                </Text>
+              </Pressable>
+            ) : null}
           </View>
         }
-        renderItem={({ item }) => (
-          <Pressable
-            testID={`process-row-${item.id}`}
-            accessibilityLabel={processTitle(item.title)}
-            onPress={() => router.push(`/process/${item.id}`)}
-            style={({ pressed }) => [
-              styles.row,
-              {
-                backgroundColor: colors.surface,
-                borderColor: colors.border,
-                opacity: pressed ? 0.7 : 1,
-              },
-            ]}>
-            <Text style={[styles.rowTitle, { color: colors.text }]}>{processTitle(item.title)}</Text>
-            {item.pinnedAt ? (
-              <Text style={[styles.pin, { color: colors.textSecondary }]}>Pinned</Text>
-            ) : null}
-          </Pressable>
-        )}
+        renderItem={({ item }) => {
+          const title = processTitle(item.title);
+          const inProgress = inProgressIds.has(item.id);
+          const runLabel = inProgress ? 'Resume' : 'Run';
+          return (
+            <View
+              testID={`process-row-${item.id}`}
+              style={[
+                styles.row,
+                { backgroundColor: colors.surface, borderColor: colors.border },
+              ]}>
+              <Pressable
+                onPress={() => router.push(`/process/${item.id}`)}
+                accessibilityRole="button"
+                accessibilityLabel={title}
+                style={({ pressed }) => [styles.rowMain, { opacity: pressed ? 0.7 : 1 }]}>
+                <Text style={[styles.rowTitle, { color: colors.text }]}>{title}</Text>
+                {item.pinnedAt ? (
+                  <Text style={[styles.pin, { color: colors.textSecondary }]}>Pinned</Text>
+                ) : null}
+              </Pressable>
+              <Pressable
+                testID={`process-run-${item.id}`}
+                onPress={() => router.push(`/run/${item.id}`)}
+                accessibilityRole="button"
+                accessibilityLabel={`${runLabel} ${title}`}
+                hitSlop={8}
+                style={({ pressed }) => [
+                  styles.run,
+                  { backgroundColor: colors.tint, opacity: pressed ? 0.8 : 1 },
+                ]}>
+                <Text style={styles.runLabel}>{runLabel}</Text>
+              </Pressable>
+            </View>
+          );
+        }}
       />
 
       {showArchived ? null : (
@@ -168,17 +223,35 @@ const styles = StyleSheet.create({
   },
   listContent: { paddingBottom: 100, gap: 8 },
   emptyList: { flexGrow: 1, justifyContent: 'center', paddingBottom: 100 },
-  empty: { gap: 8, paddingHorizontal: 8 },
+  empty: { gap: 8, paddingHorizontal: 8, alignItems: 'center' },
   emptyTitle: { fontSize: 18, fontWeight: '600', textAlign: 'center' },
   emptyBody: { fontSize: 15, lineHeight: 22, textAlign: 'center' },
+  demoButton: {
+    marginTop: 12,
+    borderWidth: 1,
+    borderRadius: 10,
+    paddingHorizontal: 16,
+    paddingVertical: 10,
+  },
   row: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
     borderWidth: 1,
     borderRadius: 12,
-    paddingHorizontal: 16,
-    paddingVertical: 16,
+    paddingLeft: 16,
+    paddingRight: 12,
+    paddingVertical: 12,
   },
+  rowMain: { flex: 1, paddingVertical: 4 },
   rowTitle: { fontSize: 17, fontWeight: '600' },
   pin: { fontSize: 13, marginTop: 4 },
+  run: {
+    borderRadius: 10,
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+  },
+  runLabel: { color: '#fff', fontSize: 15, fontWeight: '600' },
   archiveToggle: { alignSelf: 'flex-start', marginBottom: 12 },
   fab: {
     position: 'absolute',
