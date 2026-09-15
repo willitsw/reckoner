@@ -28,6 +28,8 @@ npm run test:e2e:web
 
 E2E: Playwright drives Expo web (`npm run test:e2e:web`). Maestro covers native (`npm run test:e2e:maestro` — needs the Maestro CLI + simulator). Details in [`e2e/README.md`](./e2e/README.md).
 
+On push to `main` / `master`, GitHub Actions runs typecheck, unit tests, and Playwright (see [`.github/workflows/tests.yml`](./.github/workflows/tests.yml)).
+
 If Metro crashes with `availableParallelism is not a function`, the process is on an old Node — run `node -v` in that same terminal and `nvm use` (or upgrade Node), then restart.
 ## Layout
 

@@ -17,6 +17,8 @@ npm run test:e2e:web
 
 Starts Expo on `http://127.0.0.1:8081`, then runs Chromium. Use `npm run test:e2e:web:ui` for the Playwright UI.
 
+CI runs the same command on push to `main` / `master` (`.github/workflows/tests.yml`), after `npx playwright install --with-deps chromium`.
+
 ## Maestro (native)
 
 Install the [Maestro CLI](https://maestro.mobile.dev/), start the app (Expo Go or a dev build), then:
