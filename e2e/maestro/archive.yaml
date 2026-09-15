@@ -1,0 +1,38 @@
+# Archive a process: hidden from library, visible under Archived, then unarchive.
+appId: ${MAESTRO_APP_ID}
+---
+- runFlow: flows/sign-in.yaml
+- assertVisible:
+    id: "library-empty"
+- tapOn:
+    id: "library-new-process"
+- assertVisible:
+    id: "process-screen"
+- tapOn:
+    id: "process-title"
+- eraseText
+- inputText: "Bike tune-up"
+- hideKeyboard
+- tapOn:
+    id: "process-archive"
+- assertVisible:
+    id: "process-archived-banner"
+- assertVisible:
+    id: "process-unarchive"
+- back
+- assertVisible:
+    id: "library-empty"
+- tapOn:
+    id: "library-archive-toggle"
+- assertVisible: "Bike tune-up"
+- tapOn: "Bike tune-up"
+- assertVisible:
+    id: "process-screen"
+- tapOn:
+    id: "process-unarchive"
+- assertVisible:
+    id: "process-archive"
+- back
+- tapOn:
+    id: "library-archive-toggle"
+- assertVisible: "Bike tune-up"

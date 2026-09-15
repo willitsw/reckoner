@@ -1,0 +1,18 @@
+# Shared: memory-auth sign-in → library.
+appId: ${MAESTRO_APP_ID}
+---
+- launchApp
+- extendedWaitUntil:
+    visible:
+      id: "sign-in-screen"
+    timeout: 60000
+- tapOn:
+    id: "sign-in-email"
+- inputText: "e2e@example.com"
+- tapOn:
+    id: "sign-in-password"
+- inputText: "secret-password"
+- tapOn:
+    id: "sign-in-submit"
+- assertVisible:
+    id: "library-screen"

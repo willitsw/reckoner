@@ -136,6 +136,7 @@ export default function AccountScreen() {
 
   return (
     <ScrollView
+      testID="account-screen"
       style={{ backgroundColor: colors.background }}
       contentContainerStyle={styles.screen}>
       <Text style={[styles.title, { color: colors.text }]}>Account</Text>
@@ -322,6 +323,7 @@ export default function AccountScreen() {
       </View>
 
       <Pressable
+        testID="account-sign-out"
         onPress={() => void signOut()}
         style={({ pressed }) => [
           styles.signOut,

@@ -102,14 +102,16 @@ export default function RunScreen() {
   const complete = isRunComplete(nodes, checked);
 
   return (
-    <View style={[styles.screen, { backgroundColor: colors.background }]}>
+    <View testID="run-screen" style={[styles.screen, { backgroundColor: colors.background }]}>
       <Stack.Screen options={{ title: processTitle(process.title) }} />
       <ScrollView contentContainerStyle={styles.scroll} keyboardShouldPersistTaps="handled">
         {process.notes.trim() ? (
           <Text style={[styles.notes, { color: colors.textSecondary }]}>{process.notes}</Text>
         ) : null}
         {progress.total > 0 ? (
-          <Text style={[styles.progress, { color: complete ? colors.tint : colors.textSecondary }]}>
+          <Text
+            testID="run-progress"
+            style={[styles.progress, { color: complete ? colors.tint : colors.textSecondary }]}>
             {progress.done} of {progress.total}
           </Text>
         ) : null}
@@ -236,8 +238,10 @@ function RunRow({
       ) : (
         <View style={styles.node}>
           <Pressable
+            testID={`run-check-${node.path}`}
             onPress={() => onToggle(node)}
             accessibilityRole="checkbox"
+            accessibilityLabel={nodeLabel(node)}
             accessibilityState={{ checked: boxOn }}
             style={styles.action}>
             <View

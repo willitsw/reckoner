@@ -24,6 +24,7 @@ export default function TabLayout() {
         name="index"
         options={{
           title: 'Library',
+          tabBarButtonTestID: 'tab-library',
           tabBarIcon: ({ color }) => (
             <SymbolView
               name={{ ios: 'list.bullet', android: 'list', web: 'list' }}
@@ -37,6 +38,7 @@ export default function TabLayout() {
         name="account"
         options={{
           title: 'Account',
+          tabBarButtonTestID: 'tab-account',
           tabBarIcon: ({ color }) => (
             <SymbolView
               name={{ ios: 'person', android: 'person', web: 'person' }}
