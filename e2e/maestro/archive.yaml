@@ -12,14 +12,17 @@ appId: ${MAESTRO_APP_ID}
     id: "process-title"
 - eraseText
 - inputText: "Bike tune-up"
-- hideKeyboard
+- tapOn:
+    id: "process-dismiss-keyboard"
 - tapOn:
     id: "process-archive"
 - assertVisible:
     id: "process-archived-banner"
 - assertVisible:
     id: "process-unarchive"
-- back
+- tapOn: "Library"
+- assertVisible:
+    id: "library-screen"
 - assertVisible:
     id: "library-empty"
 - tapOn:
@@ -32,7 +35,7 @@ appId: ${MAESTRO_APP_ID}
     id: "process-unarchive"
 - assertVisible:
     id: "process-archive"
-- back
+- tapOn: "Library"
 - tapOn:
     id: "library-archive-toggle"
 - assertVisible: "Bike tune-up"

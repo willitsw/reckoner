@@ -79,10 +79,9 @@ export default function SignInScreen() {
 
   return (
     <KeyboardAvoidingView
-      testID="sign-in-screen"
       style={[styles.screen, { backgroundColor: colors.background }]}
       behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
-      <View style={styles.inner}>
+      <View testID="sign-in-screen" style={styles.inner}>
         <Text style={[styles.brand, { color: colors.text }]}>{title}</Text>
         <Text style={[styles.lede, { color: colors.textSecondary }]}>{lede}</Text>
 
@@ -95,7 +94,10 @@ export default function SignInScreen() {
           autoCapitalize="none"
           autoCorrect={false}
           keyboardType="email-address"
-          textContentType="emailAddress"
+          // Dev/Maestro: avoid iOS "Save Password?" which blocks automation.
+          textContentType={__DEV__ ? 'none' : 'emailAddress'}
+          autoComplete={__DEV__ ? 'off' : 'email'}
+          importantForAutofill={__DEV__ ? 'no' : 'yes'}
           style={[
             styles.input,
             { backgroundColor: colors.surface, borderColor: colors.border, color: colors.text },
@@ -109,7 +111,11 @@ export default function SignInScreen() {
             placeholder="Password"
             placeholderTextColor={colors.textSecondary}
             secureTextEntry
-            textContentType={mode === 'sign-up' ? 'newPassword' : 'password'}
+            textContentType={
+              __DEV__ ? 'none' : mode === 'sign-up' ? 'newPassword' : 'password'
+            }
+            autoComplete={__DEV__ ? 'off' : mode === 'sign-up' ? 'new-password' : 'password'}
+            importantForAutofill={__DEV__ ? 'no' : 'yes'}
             style={[
               styles.input,
               { backgroundColor: colors.surface, borderColor: colors.border, color: colors.text },

@@ -12,7 +12,8 @@ appId: ${MAESTRO_APP_ID}
     id: "process-title"
 - eraseText
 - inputText: "Sourdough"
-- hideKeyboard
+- tapOn:
+    id: "process-dismiss-keyboard"
 - scrollUntilVisible:
     element:
       id: "process-delete"

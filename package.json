@@ -4,9 +4,10 @@
   "version": "1.0.0",
   "private": true,
   "scripts": {
-    "start": "expo start",
+    "start": "npx expo run:ios --device",
     "android": "expo run:android",
-    "ios": "expo run:ios",
+    "ios": "npx expo run:ios --device",
+    "ios:maestro": "EXPO_PUBLIC_SUPABASE_URL= EXPO_PUBLIC_SUPABASE_ANON_KEY= npx expo run:ios --device",
     "web": "expo start --web",
     "prepare": "sh scripts/install-git-hooks.sh",
     "seed:dev": "tsx scripts/seed-dev-user.ts",

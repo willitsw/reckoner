@@ -11,10 +11,10 @@ Requires **Node 18.14+** (22 recommended). This repo has an `.nvmrc`:
 ```bash
 nvm use
 npm install
-npm run start
+npm start
 ```
 
-Then press `i` (iOS simulator), `w` (web), or scan with Expo Go.
+Builds and runs a native iOS app on a connected device (`npx expo run:ios --device`). Expo Go is not used — the App Store build lags the SDK in this repo. For web: `npm run web`.
 
 Sign in with email/password against **Supabase** when `.env` has keys; otherwise memory auth. Copy [`.env.example`](./.env.example) to `.env`.
 

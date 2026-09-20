@@ -33,8 +33,8 @@ test.describe('smoke', () => {
 
     await page.getByRole('checkbox', { name: 'Charge batteries' }).click();
     await expect(byTestId(page, 'run-progress')).toHaveText('1 of 1');
+    await byTestId(page, 'run-done').click();
 
-    await page.goBack();
     await expect(byTestId(page, 'process-screen')).toBeVisible();
     await expect(byTestId(page, 'process-title')).toHaveValue('Pack camera');
     await page.goBack();

@@ -3,7 +3,7 @@
 # Only top-level YAMLs are entry flows; e2e/maestro/flows/ are shared runFlow includes.
 set -eu
 
-APP_ID="${MAESTRO_APP_ID:-host.exp.Exponent}"
+APP_ID="${MAESTRO_APP_ID:-com.reckoner.app}"
 export MAESTRO_APP_ID="$APP_ID"
 
 if ! command -v maestro >/dev/null 2>&1; then
@@ -16,4 +16,5 @@ maestro test \
   e2e/maestro/smoke.yaml \
   e2e/maestro/archive.yaml \
   e2e/maestro/delete.yaml \
+  e2e/maestro/include.yaml \
   --env MAESTRO_APP_ID="$MAESTRO_APP_ID"

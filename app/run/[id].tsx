@@ -1,6 +1,6 @@
 import { useCallback, useState } from 'react';
 import { Linking, Pressable, ScrollView, StyleSheet, View } from 'react-native';
-import { Stack, useFocusEffect, useLocalSearchParams } from 'expo-router';
+import { Stack, useFocusEffect, useLocalSearchParams, useRouter } from 'expo-router';
 
 import { Text } from '@/components/Themed';
 import Colors from '@/constants/Colors';
@@ -18,6 +18,7 @@ import { getContainer } from '@/src/di/container';
 
 export default function RunScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
+  const router = useRouter();
   const colorScheme = useColorScheme();
   const colors = Colors[colorScheme];
   const [process, setProcess] = useState<Process | null>(null);
@@ -114,6 +115,18 @@ export default function RunScreen() {
             style={[styles.progress, { color: complete ? colors.tint : colors.textSecondary }]}>
             {progress.done} of {progress.total}
           </Text>
+        ) : null}
+
+        {complete ? (
+          <Pressable
+            testID="run-done"
+            onPress={() => router.back()}
+            style={({ pressed }) => [
+              styles.done,
+              { backgroundColor: colors.tint, opacity: pressed ? 0.8 : 1 },
+            ]}>
+            <Text style={styles.doneLabel}>Done</Text>
+          </Pressable>
         ) : null}
 
         {nodes.length === 0 ? (
@@ -318,6 +331,13 @@ const styles = StyleSheet.create({
   scroll: { gap: 12, paddingBottom: 40 },
   notes: { fontSize: 15, lineHeight: 22 },
   progress: { fontSize: 14, fontWeight: '600' },
+  done: {
+    alignSelf: 'flex-start',
+    borderRadius: 10,
+    paddingHorizontal: 16,
+    paddingVertical: 10,
+  },
+  doneLabel: { color: '#fff', fontSize: 16, fontWeight: '600' },
   node: { gap: 8 },
   heading: { fontSize: 18, fontWeight: '700' },
   note: { fontSize: 15, lineHeight: 22 },

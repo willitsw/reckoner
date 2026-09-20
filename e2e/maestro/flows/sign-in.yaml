@@ -1,18 +1,29 @@
-# Shared: memory-auth sign-in → library.
+# Shared: sign-in → library.
+# clearState drops a restored session / app-lock flag from a prior device run.
+# Credentials match src/dev/demo-credentials.ts (create/refresh with npm run seed:dev).
+# Memory auth also accepts these; a Supabase-baked device build needs the seeded user.
 appId: ${MAESTRO_APP_ID}
 ---
-- launchApp
+- launchApp:
+    clearState: true
+    clearKeychain: true
 - extendedWaitUntil:
     visible:
       id: "sign-in-screen"
     timeout: 60000
 - tapOn:
     id: "sign-in-email"
-- inputText: "e2e@example.com"
+- inputText: "dev@reckoner.local"
 - tapOn:
     id: "sign-in-password"
-- inputText: "secret-password"
+- inputText: "reckoner-dev-1"
 - tapOn:
     id: "sign-in-submit"
+# iOS password Autofill sheet (if it still appears) — ignore when absent.
+- runFlow:
+    when:
+      visible: "Not Now"
+    commands:
+      - tapOn: "Not Now"
 - assertVisible:
     id: "library-screen"

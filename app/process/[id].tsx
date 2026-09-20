@@ -208,7 +208,9 @@ export default function ProcessDetailScreen() {
             Archived. It stays out of the library until you unarchive it.
           </Text>
         ) : null}
-        <Text style={[styles.section, { color: colors.textSecondary }]}>
+        <Text
+          testID="process-dismiss-keyboard"
+          style={[styles.section, { color: colors.textSecondary }]}>
           Actions can be checked off. Headings and notes cannot. Optional actions do not block
           completion. An action can include another process.
         </Text>
@@ -511,7 +513,7 @@ function IncludeRow({
 
   if (included === undefined) {
     return (
-      <Pressable onPress={onInclude}>
+      <Pressable testID="step-include" onPress={onInclude}>
         <Text style={{ color: colors.tint, fontWeight: '600' }}>Include a process</Text>
       </Pressable>
     );
@@ -520,11 +522,11 @@ function IncludeRow({
   const unavailable = !included || included.deletedAt !== null;
 
   return (
-    <View style={styles.includeBlock}>
+    <View testID="step-include-block" style={styles.includeBlock}>
       {unavailable ? (
         <Text style={{ color: colors.textSecondary }}>This process is not available.</Text>
       ) : (
-        <Pressable onPress={onOpen} disabled={!onOpen}>
+        <Pressable testID="step-include-open" onPress={onOpen} disabled={!onOpen}>
           <Text style={{ color: colors.tint, fontWeight: '600' }}>
             Includes {processTitle(included.title)}
           </Text>
@@ -535,11 +537,11 @@ function IncludeRow({
       )}
       <View style={styles.stepActions}>
         {unavailable ? null : (
-          <Pressable onPress={onInclude}>
+          <Pressable testID="step-include-change" onPress={onInclude}>
             <Text style={{ color: colors.tint, fontWeight: '600' }}>Change</Text>
           </Pressable>
         )}
-        <Pressable onPress={onRemove}>
+        <Pressable testID="step-include-remove" onPress={onRemove}>
           <Text style={{ color: colors.danger, fontWeight: '600' }}>Remove</Text>
         </Pressable>
       </View>

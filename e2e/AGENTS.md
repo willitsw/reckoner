@@ -15,7 +15,7 @@ Rules that differ from the root `AGENTS.md`.
 
 ## Selectors
 
-- Prefer `testID` / `data-testid` from the screens (`sign-in-email`, `library-new-process`, …).
+- Prefer `testID` / `data-testid` from the screens (`sign-in-email`, `library-new-process`, `step-include`, `include-picker`, …).
 - Shared IDs must stay in sync across Playwright and Maestro flows.
 
 ## Commands

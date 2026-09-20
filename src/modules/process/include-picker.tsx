@@ -69,6 +69,7 @@ export function IncludePicker({
 
   return (
     <Modal
+      testID="include-picker"
       visible
       animationType="slide"
       onRequestClose={onClose}>
@@ -83,12 +84,13 @@ export function IncludePicker({
         ]}>
         <View style={styles.header}>
           <Text style={[styles.title, { color: colors.text }]}>Include a process</Text>
-          <Pressable onPress={onClose} disabled={busy}>
+          <Pressable testID="include-picker-cancel" onPress={onClose} disabled={busy}>
             <Text style={{ color: colors.tint, fontWeight: '600' }}>Cancel</Text>
           </Pressable>
         </View>
 
         <TextInput
+          testID="include-picker-search"
           value={query}
           onChangeText={setQuery}
           placeholder="Search"
@@ -103,6 +105,7 @@ export function IncludePicker({
         />
 
         <Pressable
+          testID="include-picker-new"
           disabled={busy}
           onPress={() => void run(onCreate)}
           style={({ pressed }) => [
@@ -130,6 +133,7 @@ export function IncludePicker({
           }
           renderItem={({ item }) => (
             <Pressable
+              testID={`include-picker-row-${item.id}`}
               disabled={busy}
               onPress={() => void run(() => onSelect(item.id))}
               style={({ pressed }) => [

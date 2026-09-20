@@ -7,7 +7,7 @@ Two harnesses cover the same smoke paths:
 | Playwright | Expo web | `e2e/web/` |
 | Maestro | iOS / Android | `e2e/maestro/` |
 
-Both assume **memory adapters** (leave `EXPO_PUBLIC_SUPABASE_*` unset).
+Playwright assumes **memory** auth (it clears `EXPO_PUBLIC_SUPABASE_*` when starting Expo web). Maestro uses the demo Supabase user on a normal device build, or memory auth if you built with `npm run ios:maestro`.
 
 ## Playwright (web)
 
@@ -21,23 +21,27 @@ CI runs the same command on push to `main` / `master` (`.github/workflows/tests.
 
 ## Maestro (native)
 
-Install the [Maestro CLI](https://maestro.mobile.dev/), start the app (Expo Go or a dev build), then:
+Install the [Maestro CLI](https://maestro.mobile.dev/).
+
+With a normal device build (Supabase from `.env`), seed the demo login first, then run:
 
 ```bash
-# Expo Go on iOS Simulator (default app id)
+npm run seed:dev
+npm start   # or: npm run ios
 npm run test:e2e:maestro
-
-# Dev / release build
-MAESTRO_APP_ID=com.reckoner.app npm run test:e2e:maestro
 ```
 
-Entry flow: `e2e/maestro/smoke.yaml` (shared steps in `e2e/maestro/flows/`). With Expo Go, start Metro (`npm start`) and open the project in the simulator before running Maestro.
+Maestro signs in as `dev@reckoner.local` / `reckoner-dev-1` (see `src/dev/demo-credentials.ts`).
+
+To force memory auth instead (no Supabase user needed), build with `npm run ios:maestro` then run the Maestro script.
+
+Default app id is `com.reckoner.app`. Entry flow: `e2e/maestro/smoke.yaml` (shared steps in `e2e/maestro/flows/`).
 
 ## Smoke coverage
 
 1. Sign in → library
 2. Create process → rename → add step
-3. Run → check a step → sign out
+3. Run → check a step → Done → sign out
 
 ## Library lifecycle
 
@@ -46,3 +50,9 @@ Entry flow: `e2e/maestro/smoke.yaml` (shared steps in `e2e/maestro/flows/`). Wit
 
 Playwright: `e2e/web/library-lifecycle.spec.ts`  
 Maestro: `e2e/maestro/archive.yaml`, `e2e/maestro/delete.yaml`
+
+## Includes (sublists)
+
+- `include` — create two processes, include one as a sublist on a step of the other
+
+Maestro: `e2e/maestro/include.yaml`

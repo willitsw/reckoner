@@ -1,0 +1,53 @@
+# Include an existing process as a sublist on a step of another process.
+appId: ${MAESTRO_APP_ID}
+---
+- runFlow: flows/sign-in.yaml
+- assertVisible:
+    id: "library-empty"
+- tapOn:
+    id: "library-new-process"
+- assertVisible:
+    id: "process-screen"
+- tapOn:
+    id: "process-title"
+- eraseText
+- inputText: "Gear checklist"
+- tapOn:
+    id: "process-dismiss-keyboard"
+- tapOn: "Library"
+- assertVisible:
+    id: "library-screen"
+- assertVisible: "Gear checklist"
+- tapOn:
+    id: "library-new-process"
+- assertVisible:
+    id: "process-screen"
+- tapOn:
+    id: "process-title"
+- eraseText
+- inputText: "Day hike"
+- tapOn:
+    id: "process-dismiss-keyboard"
+- tapOn:
+    id: "process-new-step"
+- inputText: "Pack gear"
+- tapOn:
+    id: "process-add-step"
+- assertVisible: "Pack gear"
+# Keyboard from the new-step field can cover the include control.
+- tapOn:
+    id: "process-dismiss-keyboard"
+- scrollUntilVisible:
+    element:
+      id: "step-include"
+- tapOn:
+    id: "step-include"
+# Modal slide-in; prefer a concrete control over the Modal root id.
+- extendedWaitUntil:
+    visible:
+      id: "include-picker-new"
+    timeout: 15000
+- tapOn: "Gear checklist"
+- assertVisible:
+    id: "step-include-open"
+- assertVisible: "Includes Gear checklist"

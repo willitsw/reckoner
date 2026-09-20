@@ -1,5 +1,5 @@
 # Full native smoke: sign in → create process → run a step → sign out.
-# Requires Maestro CLI + a simulator/emulator with the app (Expo Go or dev build).
+# Requires Maestro CLI + a device/simulator with the native app (npm start / npx expo run:ios --device).
 appId: ${MAESTRO_APP_ID}
 ---
 - runFlow: flows/sign-in.yaml
@@ -13,7 +13,8 @@ appId: ${MAESTRO_APP_ID}
     id: "process-title"
 - eraseText
 - inputText: "Pack camera"
-- hideKeyboard
+- tapOn:
+    id: "process-dismiss-keyboard"
 - tapOn:
     id: "process-new-step"
 - inputText: "Charge batteries"
@@ -28,8 +29,11 @@ appId: ${MAESTRO_APP_ID}
     id: "run-progress"
 - tapOn: "Charge batteries"
 - assertVisible: "1 of 1"
-- back
-- back
+- tapOn:
+    id: "run-done"
+- assertVisible:
+    id: "process-screen"
+- tapOn: "Library"
 - assertVisible:
     id: "library-screen"
 - tapOn:
