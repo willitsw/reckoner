@@ -4,6 +4,7 @@ import { createExpoBiometricAdapter } from '@/src/adapters/expo/biometric';
 import { createMemoryAccountAdapter } from '@/src/adapters/memory/account';
 import { createMemoryAuthAdapter } from '@/src/adapters/memory/auth';
 import { createAlwaysFreeEntitlement } from '@/src/adapters/memory/entitlement';
+import { createMemoryMediaUploadQueue } from '@/src/adapters/memory/media-upload-queue';
 import { createMemoryLibrary } from '@/src/adapters/memory/process-repository';
 import {
   createPowerSyncProcessRepository,
@@ -24,6 +25,7 @@ import type { AuthPort } from '@/src/ports/auth';
 import type { BiometricPort } from '@/src/ports/biometric';
 import type { EntitlementPort } from '@/src/ports/entitlement';
 import type { MediaRepository } from '@/src/ports/media-repository';
+import type { MediaUploadQueue } from '@/src/ports/media-upload-queue';
 import type { ProcessRepository } from '@/src/ports/process-repository';
 import type { RunRepository } from '@/src/ports/run-repository';
 
@@ -34,6 +36,8 @@ export type AppContainer = {
   processes: ProcessRepository;
   runs: RunRepository;
   media: MediaRepository;
+  /** Device-local pending uploads; drain uses online MediaRepository when configured. */
+  mediaUploadQueue: MediaUploadQueue;
   entitlements: EntitlementPort;
   /** True when Supabase env is present. */
   supabaseConfigured: boolean;
@@ -44,8 +48,9 @@ export type AppContainer = {
 let container: AppContainer | null = null;
 
 /**
- * Online Storage + `media_assets` MediaRepository. Ready for the upload queue
- * (reckoner-q4o). Not the app default — features keep using memory/`media`.
+ * Online Storage + `media_assets` MediaRepository. Used by the upload queue
+ * drain path. Not the app default for listing — features keep using memory/`media`
+ * until PowerSync media rows land; capture should enqueue then drain.
  */
 export function createOnlineMediaRepository(
   client: SupabaseClient,
@@ -61,7 +66,8 @@ export function createOnlineMediaRepository(
  * Composition root. Auth uses Supabase when env is set.
  * Processes use PowerSync when PowerSync URL + Supabase are configured; else memory.
  * Runs/media stay memory until their adapter beads land (shared AppSchema already includes their tables).
- * Online media is available via {@link createOnlineMediaRepository} when Supabase is configured.
+ * Upload queue drains through {@link createOnlineMediaRepository} when Supabase is configured;
+ * otherwise drain targets the memory media adapter (CI / offline-dev).
  */
 export function getContainer(): AppContainer {
   if (container) return container;
@@ -86,15 +92,30 @@ export function getContainer(): AppContainer {
 
   const account = supabase ? createSupabaseAccountAdapter(supabase) : createMemoryAccountAdapter(auth);
 
-  // Feature-facing media stays memory. Online Storage path:
-  // createOnlineMediaRepository(supabase, processes) — for reckoner-q4o.
+  // Feature-facing media stays memory for list/UI until synced media lands.
+  // Queue drain uses the online Storage+row path when Supabase is configured.
+  const uploadMedia: MediaRepository =
+    supabase !== null ? createOnlineMediaRepository(supabase, processes) : library.media;
+  const mediaUploadQueue = createMemoryMediaUploadQueue({
+    media: uploadMedia,
+    // Navigator is unavailable in some RN/Node contexts; default online and let
+    // Storage failures drive retry/backoff. UI bead can inject a sharper signal.
+    isOnline: () => {
+      if (typeof navigator !== 'undefined' && typeof navigator.onLine === 'boolean') {
+        return navigator.onLine;
+      }
+      return true;
+    },
+  });
+
   container = {
     auth,
-    account: withLocalWipe(account, processes),
+    account: withLocalWipe(account, processes, [mediaUploadQueue]),
     biometrics: createExpoBiometricAdapter(),
     processes,
     runs: library.runs,
     media: library.media,
+    mediaUploadQueue,
     entitlements: createAlwaysFreeEntitlement(),
     supabaseConfigured: supabase !== null,
     powerSyncConfigured,
