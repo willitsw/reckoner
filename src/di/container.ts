@@ -19,7 +19,7 @@ import {
   createSupabaseStorageMediaRepository,
   readLocalMediaFile,
 } from '@/src/adapters/supabase/media-repository';
-import { withLocalWipe } from '@/src/modules/account/with-local-wipe';
+import { withLocalWipe, withSignOutLocalWipe } from '@/src/modules/account/with-local-wipe';
 import type { AccountPort } from '@/src/ports/account';
 import type { AuthPort } from '@/src/ports/auth';
 import type { BiometricPort } from '@/src/ports/biometric';
@@ -68,6 +68,7 @@ export function createOnlineMediaRepository(
  * Media stays memory until synced media lands (shared AppSchema already includes the table).
  * Upload queue drains through {@link createOnlineMediaRepository} when Supabase is configured;
  * otherwise drain targets the memory media adapter (CI / offline-dev).
+ * Sign-out and account delete both wipe local library (PowerSync disconnectAndClear) and the queue.
  */
 export function getContainer(): AppContainer {
   if (container) return container;
@@ -111,9 +112,11 @@ export function getContainer(): AppContainer {
     },
   });
 
+  const wipeExtras = [mediaUploadQueue];
+
   container = {
-    auth,
-    account: withLocalWipe(account, processes, [mediaUploadQueue]),
+    auth: withSignOutLocalWipe(auth, processes, wipeExtras),
+    account: withLocalWipe(account, processes, wipeExtras),
     biometrics: createExpoBiometricAdapter(),
     processes,
     runs,
