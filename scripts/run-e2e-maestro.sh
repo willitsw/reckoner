@@ -17,4 +17,7 @@ maestro test \
   e2e/maestro/archive.yaml \
   e2e/maestro/delete.yaml \
   e2e/maestro/include.yaml \
+  e2e/maestro/pin.yaml \
+  e2e/maestro/search.yaml \
+  e2e/maestro/nested-run.yaml \
   --env MAESTRO_APP_ID="$MAESTRO_APP_ID"

@@ -1,0 +1,44 @@
+# Flat library search filters by title.
+appId: ${MAESTRO_APP_ID}
+---
+- runFlow: flows/sign-in.yaml
+- assertVisible:
+    id: "library-empty"
+- tapOn:
+    id: "library-new-process"
+- assertVisible:
+    id: "process-screen"
+- tapOn:
+    id: "process-title"
+- eraseText
+- inputText: "Pack camera"
+- tapOn:
+    id: "process-dismiss-keyboard"
+- tapOn: "Library"
+- assertVisible:
+    id: "library-screen"
+- tapOn:
+    id: "library-new-process"
+- assertVisible:
+    id: "process-screen"
+- tapOn:
+    id: "process-title"
+- eraseText
+- inputText: "Bike tune-up"
+- tapOn:
+    id: "process-dismiss-keyboard"
+- tapOn: "Library"
+- assertVisible:
+    id: "library-screen"
+- assertVisible: "Pack camera"
+- assertVisible: "Bike tune-up"
+- tapOn:
+    id: "library-search"
+- inputText: "bike"
+- assertVisible: "Bike tune-up"
+- assertNotVisible: "Pack camera"
+- tapOn:
+    id: "library-search"
+- eraseText
+- assertVisible: "Pack camera"
+- assertVisible: "Bike tune-up"

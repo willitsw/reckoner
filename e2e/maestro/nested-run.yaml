@@ -1,0 +1,71 @@
+# Include a child process, then check nested steps inline on the run screen.
+appId: ${MAESTRO_APP_ID}
+---
+- runFlow: flows/sign-in.yaml
+- assertVisible:
+    id: "library-empty"
+- tapOn:
+    id: "library-new-process"
+- assertVisible:
+    id: "process-screen"
+- tapOn:
+    id: "process-title"
+- eraseText
+- inputText: "Gear checklist"
+- tapOn:
+    id: "process-dismiss-keyboard"
+- tapOn:
+    id: "process-new-step"
+- inputText: "Headlamp"
+- tapOn:
+    id: "process-add-step"
+- assertVisible: "Headlamp"
+- tapOn: "Library"
+- assertVisible:
+    id: "library-screen"
+- assertVisible: "Gear checklist"
+- tapOn:
+    id: "library-new-process"
+- assertVisible:
+    id: "process-screen"
+- tapOn:
+    id: "process-title"
+- eraseText
+- inputText: "Day hike"
+- tapOn:
+    id: "process-dismiss-keyboard"
+- tapOn:
+    id: "process-new-step"
+- inputText: "Pack gear"
+- tapOn:
+    id: "process-add-step"
+- assertVisible: "Pack gear"
+- tapOn:
+    id: "process-dismiss-keyboard"
+- scrollUntilVisible:
+    element:
+      id: "step-include"
+- tapOn:
+    id: "step-include"
+- extendedWaitUntil:
+    visible:
+      id: "include-picker-new"
+    timeout: 15000
+- tapOn: "Gear checklist"
+- assertVisible:
+    id: "step-include-open"
+- assertVisible: "Includes Gear checklist"
+- tapOn:
+    id: "process-run"
+- assertVisible:
+    id: "run-screen"
+- assertVisible:
+    id: "run-progress"
+- assertVisible: "Includes Gear checklist"
+- assertVisible: "Headlamp"
+- tapOn: "Headlamp"
+- assertVisible: "1 of 1"
+- tapOn:
+    id: "run-done"
+- assertVisible:
+    id: "process-screen"

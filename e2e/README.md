@@ -55,8 +55,47 @@ Maestro/Playwright smoke for record/attach is skipped: Expo AV recording needs a
 Playwright: `e2e/web/library-lifecycle.spec.ts`  
 Maestro: `e2e/maestro/archive.yaml`, `e2e/maestro/delete.yaml`
 
-## Includes (sublists)
+## Search and pin
+
+- `search` — flat library title filter
+- `pin` — pin label + sort above unpinned; unpin clears the label
+
+Playwright: `e2e/web/library-search-pin.spec.ts`  
+Maestro: `e2e/maestro/search.yaml`, `e2e/maestro/pin.yaml`
+
+## Includes (sublists) and nested run
 
 - `include` — create two processes, include one as a sublist on a step of the other
+- `nested-run` — run the parent; child steps expand inline; checking a child completes the parent step
 
-Maestro: `e2e/maestro/include.yaml`
+Playwright: `e2e/web/nested-run.spec.ts` (include + nested run)  
+Maestro: `e2e/maestro/include.yaml`, `e2e/maestro/nested-run.yaml`
+
+## Web / iOS parity checklist (v1 success criteria)
+
+Walked against shared Expo Router screens (same UI package). Intentional platform splits are not bugs.
+
+| # | Criterion | Web | iOS | Notes |
+|---|-----------|-----|-----|-------|
+| 1 | Sign in (email, Google; Apple on iOS) | Yes | Yes | Apple hidden on web (`oauthProvidersForPlatform`). Covered by Playwright smoke + auth gate. |
+| 2 | CRUD + search | Yes | Yes | Search E2E on both harnesses. |
+| 3 | Live nested include | Yes | Yes | Include + nested-run E2E. |
+| 4 | Run / resume / Done | Yes | Yes | Smoke + nested-run. |
+| 5 | Definition images / notes / audio | Yes | Yes | Web: Add image (+ audio attach/record where platform allows). iOS: Add image + Camera. Audio E2E skipped (mic). |
+| 6 | Offline + sync | Partial | Primary | Web weaker by design (see `.plans/architecture.md`). Not E2E-automated here. |
+| 7 | Face ID / biometrics | N/A | Yes | Account shows unavailable on web; toggle only when hardware available. |
+| 8 | Same account library | Infra | Infra | Needs real Supabase + PowerSync; not memory-E2E. |
+| 9 | Freemium shell | Yes | Yes | Account plan field; entitlement helper. |
+
+### Documented non-automatable / deferred gaps
+
+These stay out of the green CI harness (device, OS, or cloud dependent). Follow-up beads track product work where needed.
+
+| Gap | Why not E2E here | Tracking |
+|-----|------------------|----------|
+| Definition **audio** E2E | Mic/AV cannot be stubbed in CI; UI + testIDs exist (see “Definition audio” above) | `reckoner-ws6` / play-on-run `reckoner-xer` |
+| True offline / sync / cross-device | Requires Supabase + PowerSync + network control | `reckoner-z1f` |
+| Face ID unlock path | Needs enrolled biometrics on a device; account lock toggle lacks dedicated testIDs for Maestro | `reckoner-jt4.1` |
+| Native camera capture | Simulator/CI has no reliable camera; Camera control is iOS-only | intentional; not a web gap |
+| Sign in with Apple | Web intentionally omitted; App Store path | `reckoner-sv9`, `reckoner-1f1` |
+| Maestro in GitHub Actions | Needs simulator + app build; CI runs Playwright only | local `npm run test:e2e:maestro`; device verify `reckoner-jt4.3` |

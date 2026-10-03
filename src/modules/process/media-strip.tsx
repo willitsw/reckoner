@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { Image, Pressable, StyleSheet, TextInput, View } from 'react-native';
+import { Image, Platform, Pressable, StyleSheet, TextInput, View } from 'react-native';
 
 import { Text } from '@/components/Themed';
 import Colors from '@/constants/Colors';
@@ -173,18 +173,21 @@ export function MediaStrip({
               Add image
             </Text>
           </Pressable>
-          <Pressable
-            testID={cameraTestId}
-            disabled={busy || disabled}
-            onPress={() => void attach('camera')}>
-            <Text
-              style={{
-                color: busy || disabled ? colors.border : colors.textSecondary,
-                fontWeight: '600',
-              }}>
-              Camera
-            </Text>
-          </Pressable>
+          {/* v1-scope: camera on iOS; web is upload/library only. */}
+          {Platform.OS !== 'web' ? (
+            <Pressable
+              testID={cameraTestId}
+              disabled={busy || disabled}
+              onPress={() => void attach('camera')}>
+              <Text
+                style={{
+                  color: busy || disabled ? colors.border : colors.textSecondary,
+                  fontWeight: '600',
+                }}>
+                Camera
+              </Text>
+            </Pressable>
+          ) : null}
         </View>
       </View>
 

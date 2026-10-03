@@ -56,8 +56,21 @@ export async function signIn(
 export async function createNamedProcess(page: Page, title: string) {
   await signIn(page);
   await expect(byTestId(page, 'library-empty')).toBeVisible();
+  await addNamedProcessFromLibrary(page, title);
+}
+
+/** From the library screen, create a process and set its title. Leaves you on the process screen. */
+export async function addNamedProcessFromLibrary(page: Page, title: string) {
+  await expect(byTestId(page, 'library-screen')).toBeVisible();
   await byTestId(page, 'library-new-process').click();
   await expect(byTestId(page, 'process-screen')).toBeVisible();
   await typeInto(page, 'process-title', title);
   await expect(byTestId(page, 'process-title')).toHaveValue(title);
+}
+
+/** Add a step on the process screen. Leaves you on the process screen. */
+export async function addStep(page: Page, body: string) {
+  await typeInto(page, 'process-new-step', body);
+  await byTestId(page, 'process-add-step').click();
+  await expect(page.locator(`[data-testid^="step-body-"][value="${body}"]`)).toBeVisible();
 }
