@@ -19,10 +19,12 @@ async function fromResult(
   };
 }
 
-/** Library picker (web + native). Returns null on cancel or denied permission. */
+/** Library picker (web + native). Returns null on cancel. */
 export async function pickImage(): Promise<PickedImage | null> {
   const permission = await ImagePicker.requestMediaLibraryPermissionsAsync();
-  if (!permission.granted) return null;
+  if (!permission.granted) {
+    throw new Error('Photo library access is needed to attach an image.');
+  }
 
   const result = await ImagePicker.launchImageLibraryAsync({
     mediaTypes: ['images'],
@@ -32,12 +34,14 @@ export async function pickImage(): Promise<PickedImage | null> {
   return fromResult(result);
 }
 
-/** Camera when available; falls back to the library on web. */
+/** Camera when available; falls back to the library on web. Returns null on cancel. */
 export async function captureImage(): Promise<PickedImage | null> {
   if (Platform.OS === 'web') return pickImage();
 
   const permission = await ImagePicker.requestCameraPermissionsAsync();
-  if (!permission.granted) return null;
+  if (!permission.granted) {
+    throw new Error('Camera access is needed to take a photo.');
+  }
 
   const result = await ImagePicker.launchCameraAsync({
     mediaTypes: ['images'],

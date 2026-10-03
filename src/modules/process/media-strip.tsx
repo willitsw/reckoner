@@ -1,4 +1,4 @@
-import { useRef, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { Image, Pressable, StyleSheet, TextInput, View } from 'react-native';
 
 import { Text } from '@/components/Themed';
@@ -130,6 +130,10 @@ function MediaRow({
   const [caption, setCaption] = useState(asset.caption);
   const captionRef = useRef(caption);
   captionRef.current = caption;
+  useEffect(() => {
+    setCaption(asset.caption);
+    captionRef.current = asset.caption;
+  }, [asset.caption, asset.id]);
 
   return (
     <View
