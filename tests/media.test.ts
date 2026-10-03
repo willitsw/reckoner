@@ -74,6 +74,85 @@ describe('definition media', () => {
     assert.equal(updated.isCover, true);
   });
 
+  it('keeps only one cover per process (latest wins on attach and update)', async () => {
+    const { processes, media } = createMemoryLibrary();
+    const process = await processes.createProcess({ ownerId: owner, title: 'Cover kit' });
+    const step = await processes.createStep({ processId: process.id, body: 'Bay' });
+
+    const first = await media.attachImage({
+      processId: process.id,
+      storagePath: 'local://cover-a',
+      isCover: true,
+    });
+    const second = await media.attachImage({
+      processId: process.id,
+      stepId: step.id,
+      storagePath: 'local://cover-b',
+      isCover: true,
+    });
+
+    assert.equal((await media.listForProcess(process.id)).filter((a) => a.isCover).length, 1);
+    assert.equal((await media.updateMedia(first.id, {})).isCover, false);
+    assert.equal((await media.listForProcess(process.id)).find((a) => a.id === second.id)?.isCover, true);
+
+    await media.updateMedia(first.id, { isCover: true });
+    const afterUpdate = await media.listForProcess(process.id);
+    assert.deepEqual(
+      afterUpdate.filter((a) => a.isCover).map((a) => a.id),
+      [first.id],
+    );
+    assert.equal(afterUpdate.find((a) => a.id === second.id)?.isCover, false);
+  });
+
+  it('rejects attach to an unknown or deleted process, and mismatched steps', async () => {
+    const { processes, media } = createMemoryLibrary();
+    const process = await processes.createProcess({ ownerId: owner, title: 'Guards' });
+    const other = await processes.createProcess({ ownerId: owner, title: 'Other' });
+    const step = await processes.createStep({ processId: other.id, body: 'Wrong parent' });
+
+    await assert.rejects(
+      () => media.attachImage({ processId: 'missing_process', storagePath: 'local://x' }),
+      /Process not found/,
+    );
+
+    await processes.deleteProcess(process.id);
+    await assert.rejects(
+      () => media.attachImage({ processId: process.id, storagePath: 'local://x' }),
+      /deleted process/i,
+    );
+
+    await assert.rejects(
+      () =>
+        media.attachImage({
+          processId: other.id,
+          stepId: 'missing_step',
+          storagePath: 'local://x',
+        }),
+      /Step not found/,
+    );
+
+    await assert.rejects(
+      () =>
+        media.attachImage({
+          processId: process.id,
+          stepId: step.id,
+          storagePath: 'local://x',
+        }),
+      /deleted process|does not belong/i,
+    );
+
+    const live = await processes.createProcess({ ownerId: owner, title: 'Live' });
+    await assert.rejects(
+      () =>
+        media.attachImage({
+          processId: live.id,
+          stepId: step.id,
+          storagePath: 'local://x',
+        }),
+      /does not belong/,
+    );
+  });
+
   it('clearLocal wipes media with the shared library', async () => {
     const { processes, media } = createMemoryLibrary();
     const process = await processes.createProcess({ ownerId: owner, title: 'Wipe me' });
@@ -81,5 +160,15 @@ describe('definition media', () => {
 
     await processes.clearLocal();
     assert.deepEqual(await media.listForProcess(process.id), []);
+  });
+
+  it('media.clearLocal empties media without requiring process wipe first', async () => {
+    const { processes, media } = createMemoryLibrary();
+    const process = await processes.createProcess({ ownerId: owner, title: 'Media only' });
+    await media.attachImage({ processId: process.id, storagePath: 'local://y' });
+
+    await media.clearLocal();
+    assert.deepEqual(await media.listForProcess(process.id), []);
+    assert.ok(await processes.getProcess(process.id));
   });
 });
