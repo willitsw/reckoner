@@ -10,6 +10,7 @@ import { useSession } from '@/src/modules/auth/session-context';
 import { assertEntitlement } from '@/src/modules/billing/assert-entitlement';
 import { filterPendingMediaForTarget } from '@/src/modules/process/filter-pending-media';
 import { captureImage, pickImage } from '@/src/modules/process/pick-image';
+import { definitionImages } from '@/src/modules/process/split-definition-media';
 import type { PendingMediaUpload } from '@/src/ports/media-upload-queue';
 
 /** Read-only definition images for the run screen (no attach/caption/delete). */
@@ -28,12 +29,13 @@ export function DefinitionMediaView({
 }) {
   const colorScheme = useColorScheme();
   const colors = Colors[colorScheme];
+  const images = definitionImages(assets);
   const visible = coverOnly
     ? (() => {
-        const cover = assets.find((asset) => asset.isCover) ?? assets[0];
+        const cover = images.find((asset) => asset.isCover) ?? images[0];
         return cover ? [cover] : [];
       })()
-    : assets;
+    : images;
   if (visible.length === 0 && (coverOnly || pending.length === 0)) return null;
 
   return (
@@ -95,6 +97,7 @@ export function MediaStrip({
   const { session } = useSession();
   const [busy, setBusy] = useState(false);
   const [pending, setPending] = useState<PendingMediaUpload[]>([]);
+  const imageAssets = definitionImages(assets);
   const attachTestId =
     stepId === null ? 'process-attach-image' : `step-attach-image-${stepId}`;
   const cameraTestId =
@@ -149,7 +152,7 @@ export function MediaStrip({
     });
   }
 
-  const empty = assets.length === 0 && pending.length === 0;
+  const empty = imageAssets.length === 0 && pending.length === 0;
 
   return (
     <View
@@ -197,7 +200,7 @@ export function MediaStrip({
           {pending.map((job) => (
             <PendingMediaRow key={job.id} job={job} colors={colors} />
           ))}
-          {assets.map((asset) => (
+          {imageAssets.map((asset) => (
             <MediaRow
               key={asset.id}
               asset={asset}

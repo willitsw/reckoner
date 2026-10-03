@@ -17,6 +17,7 @@ import type { MediaAsset, Process, ProcessId, Step, StepKind } from '@/src/domai
 import { getContainer } from '@/src/di/container';
 import { createProcessWithEntitlement } from '@/src/modules/billing/create-process-with-entitlement';
 import { IncludePicker } from '@/src/modules/process/include-picker';
+import { AudioStrip } from '@/src/modules/process/audio-strip';
 import { MediaStrip } from '@/src/modules/process/media-strip';
 import { positionAfterMove } from '@/src/modules/process/order';
 
@@ -222,6 +223,14 @@ export default function ProcessDetailScreen() {
         </Text>
 
         <MediaStrip
+          processId={process.id}
+          stepId={null}
+          assets={mediaAssets.filter((asset) => asset.stepId === null)}
+          onChanged={load}
+          onError={setError}
+          disabled={archived}
+        />
+        <AudioStrip
           processId={process.id}
           stepId={null}
           assets={mediaAssets.filter((asset) => asset.stepId === null)}
@@ -500,6 +509,14 @@ function StepCard({
       ) : null}
 
       <MediaStrip
+        processId={step.processId}
+        stepId={step.id}
+        assets={media}
+        onChanged={onMediaChanged}
+        onError={onMediaError}
+        disabled={mediaDisabled}
+      />
+      <AudioStrip
         processId={step.processId}
         stepId={step.id}
         assets={media}

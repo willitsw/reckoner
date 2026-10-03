@@ -43,6 +43,10 @@ Default app id is `com.reckoner.app`. Entry flow: `e2e/maestro/smoke.yaml` (shar
 2. Create process → rename → add step
 3. Run → check a step → Done → sign out
 
+## Definition audio (skipped)
+
+Maestro/Playwright smoke for record/attach is skipped: Expo AV recording needs a real mic and cannot be stubbed in the current harness. Editor testIDs: `process-attach-audio`, `process-record-audio`, `process-audio`, `step-attach-audio-*`, `step-record-audio-*`, `step-audio-*`, plus shared `media-row-*` / `media-caption-*` / `media-remove-*`.
+
 ## Library lifecycle
 
 - `archive` — archive hides from library, shows under Archived, unarchive restores
