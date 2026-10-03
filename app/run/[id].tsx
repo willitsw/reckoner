@@ -15,8 +15,10 @@ import {
 } from '@/src/domain/run';
 import type { MediaAsset, Process, ProcessId, Run, Step } from '@/src/domain/types';
 import { getContainer } from '@/src/di/container';
+import { filterPendingMediaForTarget } from '@/src/modules/process/filter-pending-media';
 import { groupDefinitionMedia } from '@/src/modules/process/group-definition-media';
 import { DefinitionMediaView } from '@/src/modules/process/media-strip';
+import type { PendingMediaUpload } from '@/src/ports/media-upload-queue';
 
 export default function RunScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
@@ -27,6 +29,7 @@ export default function RunScreen() {
   const [run, setRun] = useState<Run | null>(null);
   const [nodes, setNodes] = useState<RunNode[]>([]);
   const [mediaByProcess, setMediaByProcess] = useState<Map<ProcessId, MediaAsset[]>>(new Map());
+  const [pendingUploads, setPendingUploads] = useState<PendingMediaUpload[]>([]);
   const [checked, setChecked] = useState<Set<string>>(new Set());
   const [error, setError] = useState<string | null>(null);
   const [ready, setReady] = useState(false);
@@ -42,6 +45,7 @@ export default function RunScreen() {
       setRun(null);
       setNodes([]);
       setMediaByProcess(new Map());
+      setPendingUploads([]);
       setChecked(new Set());
       setReady(true);
       return;
@@ -69,9 +73,16 @@ export default function RunScreen() {
 
     const opened = await getContainer().runs.openRun(loaded.id);
     const checks = await getContainer().runs.listChecks(opened.id);
+    let pending: PendingMediaUpload[] = [];
+    try {
+      pending = await getContainer().mediaUploadQueue.listPending();
+    } catch {
+      pending = [];
+    }
     setRun(opened);
     setNodes(expandRun({ processId: loaded.id, processes, stepsByProcess }));
     setMediaByProcess(nextMedia);
+    setPendingUploads(pending);
     setChecked(new Set(checks.map((check) => check.occurrencePath)));
     setReady(true);
   }, [id]);
@@ -114,6 +125,7 @@ export default function RunScreen() {
   const processImages = processCover
     ? rootGrouped.processLevel.filter((asset) => asset.id !== processCover.id)
     : rootGrouped.processLevel;
+  const processPending = filterPendingMediaForTarget(pendingUploads, process.id, null);
 
   return (
     <View testID="run-screen" style={[styles.screen, { backgroundColor: colors.background }]}>
@@ -125,7 +137,11 @@ export default function RunScreen() {
         {process.notes.trim() ? (
           <Text style={[styles.notes, { color: colors.textSecondary }]}>{process.notes}</Text>
         ) : null}
-        <DefinitionMediaView assets={processImages} testID="run-process-media" />
+        <DefinitionMediaView
+          assets={processImages}
+          pending={processPending}
+          testID="run-process-media"
+        />
         {progress.total > 0 ? (
           <Text
             testID="run-progress"
@@ -154,6 +170,7 @@ export default function RunScreen() {
             depth={0}
             checked={checked}
             mediaByProcess={mediaByProcess}
+            pendingUploads={pendingUploads}
             onToggle={(node) =>
               void runAction(async () => {
                 if (!run) return;
@@ -228,12 +245,14 @@ function RunNodes({
   depth,
   checked,
   mediaByProcess,
+  pendingUploads,
   onToggle,
 }: {
   nodes: RunNode[];
   depth: number;
   checked: Set<string>;
   mediaByProcess: Map<ProcessId, MediaAsset[]>;
+  pendingUploads: PendingMediaUpload[];
   onToggle: (node: RunNode) => void;
 }) {
   return (
@@ -245,6 +264,7 @@ function RunNodes({
           depth={depth}
           checked={checked}
           mediaByProcess={mediaByProcess}
+          pendingUploads={pendingUploads}
           onToggle={onToggle}
         />
       ))}
@@ -257,12 +277,14 @@ function RunRow({
   depth,
   checked,
   mediaByProcess,
+  pendingUploads,
   onToggle,
 }: {
   node: RunNode;
   depth: number;
   checked: Set<string>;
   mediaByProcess: Map<ProcessId, MediaAsset[]>;
+  pendingUploads: PendingMediaUpload[];
   onToggle: (node: RunNode) => void;
 }) {
   const colorScheme = useColorScheme();
@@ -274,9 +296,18 @@ function RunRow({
     groupDefinitionMedia(mediaByProcess.get(node.step.processId) ?? []).byStepId.get(
       node.step.id,
     ) ?? [];
+  const stepPending = filterPendingMediaForTarget(
+    pendingUploads,
+    node.step.processId,
+    node.step.id,
+  );
   const stepMediaStrip =
-    stepMedia.length > 0 ? (
-      <DefinitionMediaView assets={stepMedia} testID={`run-step-media-${node.path}`} />
+    stepMedia.length > 0 || stepPending.length > 0 ? (
+      <DefinitionMediaView
+        assets={stepMedia}
+        pending={stepPending}
+        testID={`run-step-media-${node.path}`}
+      />
     ) : null;
 
   return (
@@ -314,7 +345,8 @@ function RunRow({
           node.include?.truncated ||
           node.step.notes.trim() ||
           node.step.url ||
-          stepMedia.length > 0 ? (
+          stepMedia.length > 0 ||
+          stepPending.length > 0 ? (
             <View style={styles.detail}>
               {node.step.optional ? (
                 <Text style={{ color: colors.textSecondary, fontSize: 13 }}>Optional</Text>
@@ -358,6 +390,7 @@ function RunRow({
           depth={depth + 1}
           checked={checked}
           mediaByProcess={mediaByProcess}
+          pendingUploads={pendingUploads}
           onToggle={onToggle}
         />
       ) : null}

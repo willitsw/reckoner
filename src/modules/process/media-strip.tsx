@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { Image, Pressable, StyleSheet, TextInput, View } from 'react-native';
 
 import { Text } from '@/components/Themed';
@@ -6,15 +6,20 @@ import Colors from '@/constants/Colors';
 import { useColorScheme } from '@/components/useColorScheme';
 import { getContainer } from '@/src/di/container';
 import type { MediaAsset, ProcessId, StepId } from '@/src/domain/types';
+import { filterPendingMediaForTarget } from '@/src/modules/process/filter-pending-media';
 import { captureImage, pickImage } from '@/src/modules/process/pick-image';
+import type { PendingMediaUpload } from '@/src/ports/media-upload-queue';
 
 /** Read-only definition images for the run screen (no attach/caption/delete). */
 export function DefinitionMediaView({
   assets,
+  pending = [],
   testID,
   coverOnly = false,
 }: {
   assets: MediaAsset[];
+  /** Local queue jobs not yet uploaded — shown with a pending badge. */
+  pending?: PendingMediaUpload[];
   testID: string;
   /** When true, show only the cover (or first image) as a compact header visual. */
   coverOnly?: boolean;
@@ -27,7 +32,7 @@ export function DefinitionMediaView({
         return cover ? [cover] : [];
       })()
     : assets;
-  if (visible.length === 0) return null;
+  if (visible.length === 0 && (coverOnly || pending.length === 0)) return null;
 
   return (
     <View testID={testID} style={styles.wrap}>
@@ -40,17 +45,29 @@ export function DefinitionMediaView({
             coverOnly && styles.coverRow,
             { borderColor: colors.border, backgroundColor: colors.background },
           ]}>
-          <Image
-            testID={`media-thumb-${asset.id}`}
-            source={{ uri: asset.storagePath }}
-            style={coverOnly ? styles.coverThumb : styles.thumb}
-            accessibilityLabel={asset.caption || 'Process image'}
-          />
+          <View>
+            <Image
+              testID={`media-thumb-${asset.id}`}
+              source={{ uri: asset.storagePath }}
+              style={coverOnly ? styles.coverThumb : styles.thumb}
+              accessibilityLabel={asset.caption || 'Process image'}
+            />
+            <View
+              testID={`media-uploaded-${asset.id}`}
+              accessibilityLabel="Uploaded"
+              style={styles.statusMarker}
+            />
+          </View>
           {!coverOnly && asset.caption.trim() ? (
             <Text style={[styles.readCaption, { color: colors.textSecondary }]}>{asset.caption}</Text>
           ) : null}
         </View>
       ))}
+      {!coverOnly
+        ? pending.map((job) => (
+            <PendingMediaRow key={job.id} job={job} colors={colors} readOnly />
+          ))
+        : null}
     </View>
   );
 }
@@ -74,10 +91,25 @@ export function MediaStrip({
   const colorScheme = useColorScheme();
   const colors = Colors[colorScheme];
   const [busy, setBusy] = useState(false);
+  const [pending, setPending] = useState<PendingMediaUpload[]>([]);
   const attachTestId =
     stepId === null ? 'process-attach-image' : `step-attach-image-${stepId}`;
   const cameraTestId =
     stepId === null ? 'process-camera-image' : `step-camera-image-${stepId}`;
+
+  const refreshPending = useCallback(async () => {
+    try {
+      const listed = await getContainer().mediaUploadQueue.listPending();
+      setPending(filterPendingMediaForTarget(listed, processId, stepId));
+    } catch {
+      // Offline / queue hiccups must not crash the editor.
+      setPending([]);
+    }
+  }, [processId, stepId]);
+
+  useEffect(() => {
+    void refreshPending();
+  }, [refreshPending, assets]);
 
   async function run(action: () => Promise<void>) {
     if (busy || disabled) return;
@@ -85,6 +117,7 @@ export function MediaStrip({
     try {
       await action();
       await onChanged();
+      await refreshPending();
     } catch (error) {
       onError?.(error instanceof Error ? error.message : 'Something went wrong.');
     } finally {
@@ -96,15 +129,20 @@ export function MediaStrip({
     await run(async () => {
       const picked = from === 'camera' ? await captureImage() : await pickImage();
       if (!picked) return;
-      await getContainer().media.attachImage({
+      const queue = getContainer().mediaUploadQueue;
+      await queue.enqueue({
         processId,
         stepId,
         storagePath: picked.uri,
         contentType: picked.contentType,
         byteSize: picked.byteSize,
       });
+      // Drain when online; offline defers without throwing.
+      await queue.drain();
     });
   }
+
+  const empty = assets.length === 0 && pending.length === 0;
 
   return (
     <View
@@ -140,23 +178,63 @@ export function MediaStrip({
         </View>
       </View>
 
-      {assets.length === 0 ? (
+      {empty ? (
         <Text style={{ color: colors.textSecondary, fontSize: 13 }}>
           Optional photos for this {stepId ? 'step' : 'process'}.
         </Text>
       ) : (
-        assets.map((asset) => (
-          <MediaRow
-            key={asset.id}
-            asset={asset}
-            disabled={busy || disabled}
-            onUpdate={(patch) =>
-              void run(() => getContainer().media.updateMedia(asset.id, patch).then(() => undefined))
-            }
-            onRemove={() => void run(() => getContainer().media.softDelete(asset.id))}
-          />
-        ))
+        <>
+          {pending.map((job) => (
+            <PendingMediaRow key={job.id} job={job} colors={colors} />
+          ))}
+          {assets.map((asset) => (
+            <MediaRow
+              key={asset.id}
+              asset={asset}
+              disabled={busy || disabled}
+              onUpdate={(patch) =>
+                void run(() => getContainer().media.updateMedia(asset.id, patch).then(() => undefined))
+              }
+              onRemove={() => void run(() => getContainer().media.softDelete(asset.id))}
+            />
+          ))}
+        </>
       )}
+    </View>
+  );
+}
+
+function PendingMediaRow({
+  job,
+  colors,
+  readOnly = false,
+}: {
+  job: PendingMediaUpload;
+  colors: (typeof Colors)['light'];
+  readOnly?: boolean;
+}) {
+  return (
+    <View
+      testID={`media-row-pending-${job.id}`}
+      style={[styles.row, { borderColor: colors.border, backgroundColor: colors.background }]}>
+      <View>
+        <Image
+          testID={`media-thumb-pending-${job.id}`}
+          source={{ uri: job.localPath }}
+          style={styles.thumb}
+          accessibilityLabel={job.caption || 'Pending upload'}
+        />
+        <Text
+          testID={`media-pending-${job.id}`}
+          style={[styles.statusBadge, { color: colors.textSecondary, backgroundColor: colors.surface }]}>
+          Pending
+        </Text>
+      </View>
+      <View style={styles.meta}>
+        <Text style={{ color: colors.textSecondary, fontSize: 14 }}>
+          {job.caption.trim() || (readOnly ? 'Waiting to upload' : 'Saved on this device — uploads when online.')}
+        </Text>
+      </View>
     </View>
   );
 }
@@ -186,12 +264,19 @@ function MediaRow({
     <View
       testID={`media-row-${asset.id}`}
       style={[styles.row, { borderColor: colors.border, backgroundColor: colors.background }]}>
-      <Image
-        testID={`media-thumb-${asset.id}`}
-        source={{ uri: asset.storagePath }}
-        style={styles.thumb}
-        accessibilityLabel={asset.caption || 'Process image'}
-      />
+      <View>
+        <Image
+          testID={`media-thumb-${asset.id}`}
+          source={{ uri: asset.storagePath }}
+          style={styles.thumb}
+          accessibilityLabel={asset.caption || 'Process image'}
+        />
+        <View
+          testID={`media-uploaded-${asset.id}`}
+          accessibilityLabel="Uploaded"
+          style={styles.statusMarker}
+        />
+      </View>
       <View style={styles.meta}>
         <TextInput
           testID={`media-caption-${asset.id}`}
@@ -256,6 +341,18 @@ const styles = StyleSheet.create({
   },
   thumb: { width: 64, height: 64, borderRadius: 8, backgroundColor: '#D6D3D1' },
   coverThumb: { width: 48, height: 48, borderRadius: 8, backgroundColor: '#D6D3D1' },
+  statusBadge: {
+    position: 'absolute',
+    left: 4,
+    bottom: 4,
+    fontSize: 10,
+    fontWeight: '700',
+    paddingHorizontal: 4,
+    paddingVertical: 1,
+    borderRadius: 4,
+    overflow: 'hidden',
+  },
+  statusMarker: { width: 0, height: 0, overflow: 'hidden' },
   readCaption: { flex: 1, fontSize: 14, lineHeight: 20 },
   meta: { flex: 1, gap: 6 },
   caption: {
