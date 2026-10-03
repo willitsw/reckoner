@@ -11,6 +11,7 @@ import type { AccountPort } from '@/src/ports/account';
 import type { AuthPort } from '@/src/ports/auth';
 import type { BiometricPort } from '@/src/ports/biometric';
 import type { EntitlementPort } from '@/src/ports/entitlement';
+import type { MediaRepository } from '@/src/ports/media-repository';
 import type { ProcessRepository } from '@/src/ports/process-repository';
 import type { RunRepository } from '@/src/ports/run-repository';
 
@@ -20,6 +21,7 @@ export type AppContainer = {
   biometrics: BiometricPort;
   processes: ProcessRepository;
   runs: RunRepository;
+  media: MediaRepository;
   entitlements: EntitlementPort;
   /** True when Supabase env is present. */
   supabaseConfigured: boolean;
@@ -45,6 +47,7 @@ export function getContainer(): AppContainer {
     biometrics: createExpoBiometricAdapter(),
     processes,
     runs: library.runs,
+    media: library.media,
     entitlements: createAlwaysFreeEntitlement(),
     supabaseConfigured: supabase !== null,
   };

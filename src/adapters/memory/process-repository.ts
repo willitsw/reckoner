@@ -3,12 +3,14 @@ import { rankBetween } from '@/src/domain/rank';
 import { stepIdFromPath } from '@/src/domain/run';
 import type { Process, ProcessId, Run, RunCheck, Step, StepKind, UserId } from '@/src/domain/types';
 import { normalizeUrl } from '@/src/domain/url';
+import type { MediaRepository } from '@/src/ports/media-repository';
 import type {
   CreateProcessInput,
   CreateStepInput,
   ProcessRepository,
 } from '@/src/ports/process-repository';
 import type { RunRepository } from '@/src/ports/run-repository';
+import { createMemoryMediaRepository } from './media-repository';
 
 function nowIso() {
   return new Date().toISOString();
@@ -50,18 +52,29 @@ function liveIncludes(steps: Map<string, Step>) {
 export type MemoryLibrary = {
   processes: ProcessRepository;
   runs: RunRepository;
+  media: MediaRepository;
 };
 
 /**
- * Ephemeral in-memory process and run store for scaffold / tests.
+ * Ephemeral in-memory process, run, and media store for scaffold / tests.
  * Delete is soft, matching the Postgres model. Runs and processes share one store
- * so deleting a process discards its in-progress run.
+ * so deleting a process discards its in-progress run. Media validates parents
+ * against the same process/step maps.
  */
 export function createMemoryLibrary(): MemoryLibrary {
   const processes = new Map<ProcessId, Process>();
   const steps = new Map<string, Step>();
   const runs = new Map<string, Run>();
   const checks = new Map<string, RunCheck>();
+
+  const mediaRepository = createMemoryMediaRepository({
+    getProcess: (processId) => processes.get(processId),
+    getStep: (stepId) => steps.get(stepId),
+    listLiveSteps: (processId) =>
+      [...steps.values()]
+        .filter((step) => step.processId === processId && step.deletedAt === null)
+        .sort((a, b) => compareRank(a.position, b.position) || compareRank(a.id, b.id)),
+  });
 
   function requireProcess(processId: ProcessId) {
     const existing = processes.get(processId);
@@ -309,6 +322,7 @@ export function createMemoryLibrary(): MemoryLibrary {
       steps.clear();
       runs.clear();
       checks.clear();
+      await mediaRepository.clearLocal();
     },
   };
 
@@ -396,7 +410,7 @@ export function createMemoryLibrary(): MemoryLibrary {
     },
   };
 
-  return { processes: processRepository, runs: runRepository };
+  return { processes: processRepository, runs: runRepository, media: mediaRepository };
 }
 
 export function createMemoryProcessRepository(): ProcessRepository {
