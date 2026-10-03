@@ -1,0 +1,48 @@
+# Pin sorts a process above unpinned rows and shows a Pinned label.
+appId: ${MAESTRO_APP_ID}
+---
+- runFlow: flows/sign-in.yaml
+- assertVisible:
+    id: "library-empty"
+- tapOn:
+    id: "library-new-process"
+- assertVisible:
+    id: "process-screen"
+- tapOn:
+    id: "process-title"
+- eraseText
+- inputText: "Older process"
+- tapOn:
+    id: "process-dismiss-keyboard"
+- tapOn: "Library"
+- assertVisible:
+    id: "library-screen"
+- tapOn:
+    id: "library-new-process"
+- assertVisible:
+    id: "process-screen"
+- tapOn:
+    id: "process-title"
+- eraseText
+- inputText: "Weekend kit"
+- tapOn:
+    id: "process-dismiss-keyboard"
+- tapOn:
+    id: "process-pin"
+- assertVisible: "Unpin"
+- tapOn: "Library"
+- assertVisible:
+    id: "library-screen"
+- assertVisible: "Weekend kit"
+- assertVisible: "Pinned"
+- assertVisible: "Older process"
+- tapOn: "Weekend kit"
+- assertVisible:
+    id: "process-screen"
+- tapOn:
+    id: "process-pin"
+- assertVisible: "Pin"
+- tapOn: "Library"
+- assertVisible:
+    id: "library-screen"
+- assertNotVisible: "Pinned"
