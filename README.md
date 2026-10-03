@@ -4,6 +4,11 @@ Consumer app for reusable, nestable **Processes** (hobby workflows first). iOS +
 
 Product decisions live in `.plans/` (gitignored). Architecture rules: [`AGENTS.md`](./AGENTS.md).
 
+Marketing and growth planning:
+
+- [`docs/marketing-plan.md`](./docs/marketing-plan.md)
+- [`docs/growth-beads.md`](./docs/growth-beads.md)
+
 ## Quick start
 
 Requires **Node 18.14+** (22 recommended). This repo has an `.nvmrc`:
