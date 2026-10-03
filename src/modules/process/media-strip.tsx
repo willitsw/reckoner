@@ -8,6 +8,53 @@ import { getContainer } from '@/src/di/container';
 import type { MediaAsset, ProcessId, StepId } from '@/src/domain/types';
 import { captureImage, pickImage } from '@/src/modules/process/pick-image';
 
+/** Read-only definition images for the run screen (no attach/caption/delete). */
+export function DefinitionMediaView({
+  assets,
+  testID,
+  coverOnly = false,
+}: {
+  assets: MediaAsset[];
+  testID: string;
+  /** When true, show only the cover (or first image) as a compact header visual. */
+  coverOnly?: boolean;
+}) {
+  const colorScheme = useColorScheme();
+  const colors = Colors[colorScheme];
+  const visible = coverOnly
+    ? (() => {
+        const cover = assets.find((asset) => asset.isCover) ?? assets[0];
+        return cover ? [cover] : [];
+      })()
+    : assets;
+  if (visible.length === 0) return null;
+
+  return (
+    <View testID={testID} style={styles.wrap}>
+      {visible.map((asset) => (
+        <View
+          key={asset.id}
+          testID={`media-row-${asset.id}`}
+          style={[
+            styles.row,
+            coverOnly && styles.coverRow,
+            { borderColor: colors.border, backgroundColor: colors.background },
+          ]}>
+          <Image
+            testID={`media-thumb-${asset.id}`}
+            source={{ uri: asset.storagePath }}
+            style={coverOnly ? styles.coverThumb : styles.thumb}
+            accessibilityLabel={asset.caption || 'Process image'}
+          />
+          {!coverOnly && asset.caption.trim() ? (
+            <Text style={[styles.readCaption, { color: colors.textSecondary }]}>{asset.caption}</Text>
+          ) : null}
+        </View>
+      ))}
+    </View>
+  );
+}
+
 export function MediaStrip({
   processId,
   stepId = null,
@@ -199,8 +246,17 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderRadius: 10,
     padding: 8,
+    alignItems: 'center',
+  },
+  coverRow: {
+    alignSelf: 'flex-start',
+    borderWidth: 0,
+    padding: 0,
+    backgroundColor: 'transparent',
   },
   thumb: { width: 64, height: 64, borderRadius: 8, backgroundColor: '#D6D3D1' },
+  coverThumb: { width: 48, height: 48, borderRadius: 8, backgroundColor: '#D6D3D1' },
+  readCaption: { flex: 1, fontSize: 14, lineHeight: 20 },
   meta: { flex: 1, gap: 6 },
   caption: {
     borderWidth: 1,
