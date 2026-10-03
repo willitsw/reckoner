@@ -9,7 +9,12 @@ import {
 } from 'react';
 
 import { getContainer } from '@/src/di/container';
-import type { AuthSession, SignUpResult } from '@/src/ports/auth';
+import type {
+  AuthSession,
+  OAuthProvider,
+  SignInWithProviderResult,
+  SignUpResult,
+} from '@/src/ports/auth';
 
 type SessionContextValue = {
   session: AuthSession | null;
@@ -20,6 +25,7 @@ type SessionContextValue = {
   callbackError: string | null;
   signInWithPassword: (email: string, password: string) => Promise<void>;
   signUpWithPassword: (email: string, password: string) => Promise<SignUpResult>;
+  signInWithProvider: (provider: OAuthProvider) => Promise<SignInWithProviderResult>;
   requestPasswordReset: (email: string) => Promise<void>;
   reauthenticate: (password: string) => Promise<void>;
   updatePassword: (password: string) => Promise<void>;
@@ -92,6 +98,10 @@ export function SessionProvider({ children }: { children: ReactNode }) {
       },
       signUpWithPassword(email, password) {
         return auth.signUpWithPassword(email, password);
+      },
+      signInWithProvider(provider) {
+        setPendingPasswordReset(false);
+        return auth.signInWithProvider(provider);
       },
       requestPasswordReset(email) {
         return auth.requestPasswordReset(email);

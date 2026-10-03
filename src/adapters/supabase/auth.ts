@@ -140,6 +140,11 @@ export function createSupabaseAuthAdapter(client: SupabaseClient): AuthPort {
     },
 
     async signInWithProvider(provider: OAuthProvider): Promise<SignInWithProviderResult> {
+      // Apple SSO is iOS-only in product UI; no-op if somehow invoked on web.
+      if (provider === 'apple' && Platform.OS === 'web') {
+        return { status: 'error', message: 'Sign in with Apple is available on iOS.' };
+      }
+
       const redirectTo = Linking.createURL('/');
       const { data, error } = await client.auth.signInWithOAuth({
         provider,
