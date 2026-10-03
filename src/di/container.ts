@@ -6,7 +6,7 @@ import { createMemoryAuthAdapter } from '@/src/adapters/memory/auth';
 import { createAlwaysFreeEntitlement } from '@/src/adapters/memory/entitlement';
 import { createMemoryLibrary } from '@/src/adapters/memory/process-repository';
 import {
-  createPowerSyncProcessRepository,
+  createPowerSyncLibrary,
   createSupabasePowerSyncConnector,
   isPowerSyncConfigured,
   openAppPowerSyncDatabase,
@@ -37,7 +37,7 @@ export type AppContainer = {
   entitlements: EntitlementPort;
   /** True when Supabase env is present. */
   supabaseConfigured: boolean;
-  /** True when PowerSync + Supabase env select the sync process adapter. */
+  /** True when PowerSync + Supabase env select the sync process/run adapters. */
   powerSyncConfigured: boolean;
 };
 
@@ -59,8 +59,8 @@ export function createOnlineMediaRepository(
 
 /**
  * Composition root. Auth uses Supabase when env is set.
- * Processes use PowerSync when PowerSync URL + Supabase are configured; else memory.
- * Runs/media stay memory until their adapter beads land (shared AppSchema already includes their tables).
+ * Processes + runs use PowerSync when PowerSync URL + Supabase are configured; else memory.
+ * Media stays memory until its adapter bead lands (shared AppSchema already includes the table).
  * Online media is available via {@link createOnlineMediaRepository} when Supabase is configured.
  */
 export function getContainer(): AppContainer {
@@ -68,20 +68,23 @@ export function getContainer(): AppContainer {
 
   const supabase = createSupabaseClient();
   const auth = supabase ? createSupabaseAuthAdapter(supabase) : createMemoryAuthAdapter();
-  const library = createMemoryLibrary();
+  const memory = createMemoryLibrary();
   const powerSyncConfigured = Boolean(supabase && isPowerSyncConfigured());
 
-  let processes: ProcessRepository = library.processes;
+  let processes: ProcessRepository = memory.processes;
+  let runs: RunRepository = memory.runs;
   if (powerSyncConfigured && supabase) {
     const powerSyncUrl = process.env.EXPO_PUBLIC_POWERSYNC_URL!;
     const connector = createSupabasePowerSyncConnector({ supabase, powerSyncUrl });
-    processes = createPowerSyncProcessRepository({
+    const syncLibrary = createPowerSyncLibrary({
       openDb: async () => {
         const db = await openAppPowerSyncDatabase();
         await db.connect(connector);
         return db;
       },
     });
+    processes = syncLibrary.processes;
+    runs = syncLibrary.runs;
   }
 
   const account = supabase ? createSupabaseAccountAdapter(supabase) : createMemoryAccountAdapter(auth);
@@ -93,8 +96,8 @@ export function getContainer(): AppContainer {
     account: withLocalWipe(account, processes),
     biometrics: createExpoBiometricAdapter(),
     processes,
-    runs: library.runs,
-    media: library.media,
+    runs,
+    media: memory.media,
     entitlements: createAlwaysFreeEntitlement(),
     supabaseConfigured: supabase !== null,
     powerSyncConfigured,
