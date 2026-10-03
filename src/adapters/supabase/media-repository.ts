@@ -3,6 +3,7 @@ import type { SupabaseClient } from '@supabase/supabase-js';
 import { rankBetween } from '@/src/domain/rank';
 import type { MediaAsset, MediaId, ProcessId, StepId } from '@/src/domain/types';
 import type {
+  AttachAudioInput,
   AttachImageInput,
   MediaRepository,
   UpdateMediaPatch,
@@ -162,6 +163,65 @@ export function createSupabaseMediaRepository(deps: SupabaseMediaRepositoryDeps)
         caption: input.caption ?? '',
         position: await nextPosition(input.processId, stepId, input.position),
         isCover: input.isCover ?? false,
+        deletedAt: null,
+        createdAt: timestamp,
+        updatedAt: timestamp,
+      };
+
+      return deps.rows.insert(asset);
+    },
+
+    async attachAudio(input: AttachAudioInput) {
+      if ('isCover' in input && (input as { isCover?: boolean }).isCover === true) {
+        throw new Error('Only an image can be cover.');
+      }
+
+      const process = await deps.processes.getProcess(input.processId);
+      if (!process) throw new Error(`Process not found: ${input.processId}`);
+      if (process.deletedAt) throw new Error('A deleted process cannot take new media.');
+
+      const stepId = input.stepId ?? null;
+      if (stepId !== null) {
+        const steps = await deps.processes.listSteps(input.processId);
+        const step = steps.find((row) => row.id === stepId);
+        if (!step || step.deletedAt) throw new Error(`Step not found: ${stepId}`);
+        if (step.processId !== input.processId) {
+          throw new Error('That step does not belong to this process.');
+        }
+      }
+
+      if (!input.storagePath) throw new Error('storagePath is required.');
+      if (input.byteSize != null && input.byteSize < 0) {
+        throw new Error('byteSize cannot be negative.');
+      }
+
+      const mediaId = createId() as MediaId;
+      const objectPath = mediaObjectPath(process.ownerId, mediaId);
+      const local = await deps.readLocalFile(input.storagePath);
+      const contentType = input.contentType ?? local.contentType ?? null;
+
+      await deps.storage.upload({
+        bucket: MEDIA_BUCKET,
+        path: objectPath,
+        body: local.body,
+        contentType,
+      });
+
+      const timestamp = now();
+      const asset: MediaAsset = {
+        id: mediaId,
+        ownerId: process.ownerId,
+        createdBy: process.ownerId,
+        updatedBy: process.ownerId,
+        processId: input.processId,
+        stepId,
+        kind: 'audio',
+        storagePath: objectPath,
+        contentType,
+        byteSize: input.byteSize ?? local.body.byteLength,
+        caption: input.caption ?? '',
+        position: await nextPosition(input.processId, stepId, input.position),
+        isCover: false,
         deletedAt: null,
         createdAt: timestamp,
         updatedAt: timestamp,

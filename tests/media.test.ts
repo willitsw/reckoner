@@ -172,3 +172,120 @@ describe('definition media', () => {
     assert.ok(await processes.getProcess(process.id));
   });
 });
+
+describe('definition audio', () => {
+  it('attaches audio to process and step, lists, and soft-deletes', async () => {
+    const { processes, media } = createMemoryLibrary();
+    const process = await processes.createProcess({ ownerId: owner, title: 'Voice notes' });
+    const step = await processes.createStep({ processId: process.id, body: 'Listen first' });
+
+    const processAudio = await media.attachAudio({
+      processId: process.id,
+      storagePath: 'file:///local/intro.m4a',
+      contentType: 'audio/mp4',
+      caption: 'Overview',
+    });
+    const stepAudio = await media.attachAudio({
+      processId: process.id,
+      stepId: step.id,
+      storagePath: 'file:///local/step.m4a',
+      caption: 'Detail',
+    });
+
+    assert.equal(processAudio.kind, 'audio');
+    assert.equal(processAudio.isCover, false);
+    assert.equal(processAudio.stepId, null);
+    assert.equal(processAudio.storagePath, 'file:///local/intro.m4a');
+    assert.equal(stepAudio.kind, 'audio');
+    assert.equal(stepAudio.stepId, step.id);
+
+    const forProcess = await media.listForProcess(process.id);
+    assert.deepEqual(
+      forProcess.map((asset) => asset.id),
+      [processAudio.id, stepAudio.id],
+    );
+    assert.deepEqual(
+      (await media.listForStep(process.id, null)).map((asset) => asset.id),
+      [processAudio.id],
+    );
+    assert.deepEqual(
+      (await media.listForStep(process.id, step.id)).map((asset) => asset.id),
+      [stepAudio.id],
+    );
+
+    await media.softDelete(stepAudio.id);
+    assert.deepEqual(
+      (await media.listForProcess(process.id)).map((asset) => asset.id),
+      [processAudio.id],
+    );
+    assert.deepEqual(await media.listForStep(process.id, step.id), []);
+  });
+
+  it('never treats audio as cover on attach or update', async () => {
+    const { processes, media } = createMemoryLibrary();
+    const process = await processes.createProcess({ ownerId: owner, title: 'Cover guard' });
+    const coverImage = await media.attachImage({
+      processId: process.id,
+      storagePath: 'local://cover.jpg',
+      isCover: true,
+    });
+
+    await assert.rejects(
+      () =>
+        media.attachAudio({
+          processId: process.id,
+          storagePath: 'file:///local/no-cover.m4a',
+          // @ts-expect-error audio attach must not accept isCover
+          isCover: true,
+        }),
+      /cover|isCover|image/i,
+    );
+
+    const audio = await media.attachAudio({
+      processId: process.id,
+      storagePath: 'file:///local/voice.m4a',
+    });
+    assert.equal(audio.isCover, false);
+
+    await assert.rejects(
+      () => media.updateMedia(audio.id, { isCover: true }),
+      /Only an image can be cover/,
+    );
+
+    assert.equal(
+      (await media.listForProcess(process.id)).find((a) => a.id === coverImage.id)?.isCover,
+      true,
+    );
+    assert.equal(
+      (await media.listForProcess(process.id)).find((a) => a.id === audio.id)?.isCover,
+      false,
+    );
+  });
+
+  it('lists images and audio together; clearLocal wipes both', async () => {
+    const { processes, media } = createMemoryLibrary();
+    const process = await processes.createProcess({ ownerId: owner, title: 'Mixed media' });
+
+    const image = await media.attachImage({
+      processId: process.id,
+      storagePath: 'local://pic.jpg',
+    });
+    const audio = await media.attachAudio({
+      processId: process.id,
+      storagePath: 'file:///local/note.m4a',
+    });
+
+    const listed = await media.listForProcess(process.id);
+    assert.deepEqual(
+      listed.map((asset) => [asset.id, asset.kind]),
+      [
+        [image.id, 'image'],
+        [audio.id, 'audio'],
+      ],
+    );
+
+    await media.clearLocal();
+    assert.deepEqual(await media.listForProcess(process.id), []);
+    assert.ok(await processes.getProcess(process.id));
+  });
+});

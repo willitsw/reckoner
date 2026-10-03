@@ -104,6 +104,9 @@ describe('account', () => {
       attachImage: async () => {
         throw new Error('should not attach during wipe test');
       },
+      attachAudio: async () => {
+        throw new Error('should not attach during wipe test');
+      },
       updateMedia: async () => {
         throw new Error('unused');
       },
