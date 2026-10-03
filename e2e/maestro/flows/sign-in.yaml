@@ -11,6 +11,11 @@ appId: ${MAESTRO_APP_ID}
     visible:
       id: "sign-in-screen"
     timeout: 60000
+# SSO controls (visibility only — full OAuth / Apple sheet not automated).
+- assertVisible:
+    id: "sign-in-google"
+- assertVisible:
+    id: "sign-in-apple"
 - tapOn:
     id: "sign-in-email"
 - inputText: "dev@reckoner.local"

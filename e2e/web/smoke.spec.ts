@@ -8,6 +8,14 @@ test.describe('auth gate', () => {
     await expect(byTestId(page, 'sign-in-screen')).toBeVisible();
     await expect(byTestId(page, 'sign-in-email')).toBeVisible();
   });
+
+  test('Google sign-in is available; Apple is hidden on web', async ({ page }) => {
+    await page.goto('/');
+    await expect(byTestId(page, 'sign-in-screen')).toBeVisible();
+    // Memory AuthPort is always wired in Playwright (Supabase env cleared).
+    await expect(byTestId(page, 'sign-in-google')).toBeVisible();
+    await expect(byTestId(page, 'sign-in-apple')).toHaveCount(0);
+  });
 });
 
 test.describe('smoke', () => {
