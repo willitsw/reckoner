@@ -15,9 +15,11 @@ import {
 } from '@/src/domain/run';
 import type { MediaAsset, Process, ProcessId, Run, Step } from '@/src/domain/types';
 import { getContainer } from '@/src/di/container';
+import { DefinitionAudioView } from '@/src/modules/process/audio-strip';
 import { filterPendingMediaForTarget } from '@/src/modules/process/filter-pending-media';
 import { groupDefinitionMedia } from '@/src/modules/process/group-definition-media';
 import { DefinitionMediaView } from '@/src/modules/process/media-strip';
+import { definitionAudio, definitionImages } from '@/src/modules/process/split-definition-media';
 import type { PendingMediaUpload } from '@/src/ports/media-upload-queue';
 
 export default function RunScreen() {
@@ -121,10 +123,11 @@ export default function RunScreen() {
   const progress = requiredProgress(nodes, checked);
   const complete = isRunComplete(nodes, checked);
   const rootGrouped = groupDefinitionMedia(mediaByProcess.get(process.id) ?? []);
-  const processCover = rootGrouped.processLevel.find((asset) => asset.isCover) ?? null;
-  const processImages = processCover
-    ? rootGrouped.processLevel.filter((asset) => asset.id !== processCover.id)
-    : rootGrouped.processLevel;
+  const processCover = rootGrouped.cover;
+  const processImages = definitionImages(rootGrouped.processLevel).filter(
+    (asset) => asset.id !== processCover?.id,
+  );
+  const processAudio = definitionAudio(rootGrouped.processLevel);
   const processPending = filterPendingMediaForTarget(pendingUploads, process.id, null);
 
   return (
@@ -142,6 +145,7 @@ export default function RunScreen() {
           pending={processPending}
           testID="run-process-media"
         />
+        <DefinitionAudioView assets={processAudio} testID="run-process-audio" />
         {progress.total > 0 ? (
           <Text
             testID="run-progress"
@@ -298,19 +302,24 @@ function RunRow({
     groupDefinitionMedia(mediaByProcess.get(node.step.processId) ?? []).byStepId.get(
       node.step.id,
     ) ?? [];
+  const stepImages = definitionImages(stepMedia);
+  const stepAudio = definitionAudio(stepMedia);
   const stepPending = filterPendingMediaForTarget(
     pendingUploads,
     node.step.processId,
     node.step.id,
   );
-  const stepMediaStrip =
-    stepMedia.length > 0 || stepPending.length > 0 ? (
+  const hasStepMedia = stepImages.length > 0 || stepAudio.length > 0 || stepPending.length > 0;
+  const stepMediaStrip = hasStepMedia ? (
+    <>
       <DefinitionMediaView
-        assets={stepMedia}
+        assets={stepImages}
         pending={stepPending}
         testID={`run-step-media-${node.path}`}
       />
-    ) : null;
+      <DefinitionAudioView assets={stepAudio} testID={`run-step-audio-${node.path}`} />
+    </>
+  ) : null;
 
   return (
     <View style={styles.node}>
@@ -347,8 +356,7 @@ function RunRow({
           node.include?.truncated ||
           node.step.notes.trim() ||
           node.step.url ||
-          stepMedia.length > 0 ||
-          stepPending.length > 0 ? (
+          hasStepMedia ? (
             <View style={styles.detail}>
               {node.step.optional ? (
                 <Text style={{ color: colors.textSecondary, fontSize: 13 }}>Optional</Text>

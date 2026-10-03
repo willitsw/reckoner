@@ -8,12 +8,118 @@ import { getContainer } from '@/src/di/container';
 import type { MediaAsset, ProcessId, StepId } from '@/src/domain/types';
 import { useSession } from '@/src/modules/auth/session-context';
 import { assertEntitlement } from '@/src/modules/billing/assert-entitlement';
+import { definitionAudioPlaybackUri } from '@/src/modules/process/definition-audio-playback';
 import {
   pickAudio,
   startAudioRecording,
   type ActiveAudioRecording,
 } from '@/src/modules/process/pick-audio';
+import {
+  playDefinitionAudio,
+  type DefinitionAudioPlayback,
+} from '@/src/modules/process/play-definition-audio';
 import { definitionAudio } from '@/src/modules/process/split-definition-media';
+
+/** Read-only definition audio for the run screen (play only — no attach/delete). */
+export function DefinitionAudioView({
+  assets,
+  testID,
+}: {
+  assets: MediaAsset[];
+  testID: string;
+}) {
+  const colorScheme = useColorScheme();
+  const colors = Colors[colorScheme];
+  const audioAssets = definitionAudio(assets);
+  const [playingId, setPlayingId] = useState<string | null>(null);
+  const playbackRef = useRef<DefinitionAudioPlayback | null>(null);
+
+  useEffect(() => {
+    return () => {
+      void playbackRef.current?.stop();
+      playbackRef.current = null;
+    };
+  }, []);
+
+  if (audioAssets.length === 0) return null;
+
+  async function togglePlay(asset: MediaAsset) {
+    const uri = definitionAudioPlaybackUri(asset);
+    if (!uri) return;
+
+    if (playingId === asset.id) {
+      await playbackRef.current?.stop();
+      playbackRef.current = null;
+      setPlayingId(null);
+      return;
+    }
+
+    await playbackRef.current?.stop();
+    playbackRef.current = null;
+    setPlayingId(asset.id);
+    try {
+      const playback = await playDefinitionAudio(uri, {
+        onFinished: () => {
+          if (playbackRef.current === playback) playbackRef.current = null;
+          setPlayingId((current) => (current === asset.id ? null : current));
+        },
+      });
+      playbackRef.current = playback;
+    } catch {
+      setPlayingId(null);
+    }
+  }
+
+  return (
+    <View testID={testID} style={styles.wrap}>
+      {audioAssets.map((asset) => {
+        const playable = definitionAudioPlaybackUri(asset) !== null;
+        const active = playingId === asset.id;
+        return (
+          <View
+            key={asset.id}
+            testID={`media-row-${asset.id}`}
+            style={[styles.row, { borderColor: colors.border, backgroundColor: colors.background }]}>
+            <View
+              testID={`media-audio-${asset.id}`}
+              accessibilityLabel={asset.caption || 'Process audio'}
+              style={[
+                styles.audioMark,
+                { backgroundColor: colors.surface, borderColor: colors.border },
+              ]}>
+              <Text style={{ color: colors.textSecondary, fontWeight: '700', fontSize: 12 }}>
+                Audio
+              </Text>
+            </View>
+            <View style={styles.meta}>
+              {asset.caption.trim() ? (
+                <Text style={[styles.readCaption, { color: colors.textSecondary }]}>
+                  {asset.caption}
+                </Text>
+              ) : (
+                <Text style={[styles.readCaption, { color: colors.textSecondary }]}>Audio</Text>
+              )}
+              <Pressable
+                testID={`media-play-${asset.id}`}
+                disabled={!playable}
+                onPress={() => void togglePlay(asset)}
+                accessibilityRole="button"
+                accessibilityLabel={active ? 'Stop audio' : 'Play audio'}>
+                <Text
+                  style={{
+                    color: playable ? colors.tint : colors.border,
+                    fontWeight: '600',
+                  }}>
+                  {active ? 'Stop' : 'Play'}
+                </Text>
+              </Pressable>
+            </View>
+          </View>
+        );
+      })}
+    </View>
+  );
+}
 
 /** Editor strip for definition audio — attach/record, caption, soft-delete. No cover. */
 export function AudioStrip({
@@ -285,4 +391,5 @@ const styles = StyleSheet.create({
     fontSize: 14,
   },
   actions: { flexDirection: 'row', justifyContent: 'space-between', gap: 12 },
+  readCaption: { fontSize: 14, lineHeight: 20 },
 });
