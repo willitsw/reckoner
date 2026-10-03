@@ -11,10 +11,12 @@ Terse rules for humans and agents working in this repo. Prefer pointers over ess
 
 ## Testing
 
-- **Prefer behavioral tests:** integration and end-to-end over unit tests with heavy mocks.
+- **TDD by default** for ports, adapters, and domain logic: write a failing behavioral test first, implement until green, then refactor. Claimed beads should land that way unless the harness truly cannot reach the path (note why on the bead).
+- **Prefer behavioral tests:** integration and end-to-end over unit tests with heavy mocks. App tests live in `/tests` and talk to ports via memory/test adapters; DB tests in `/supabase/tests/database`; E2E in `/e2e`.
 - **Mock only true externals** (or replace them with test adapters / local stacks). Do not mock internal modules to make a test pass.
 - **Unit-test pure logic** only when it is awkward or expensive to cover through the behavioral path (e.g. cycle checks, ordering, pure transforms).
 - **Tests describe user- or system-visible behavior**, not implementation details of adapters.
+- **Every bead that changes behavior** must list Test coverage (and TDD steps when applicable) in its description or acceptance criteria before implementation starts. UI work: port-level tests first, then `testID`s, then Playwright/Maestro when the path is harnessable.
 
 ## Docs & discovery
 

@@ -44,10 +44,12 @@ If Metro crashes with `availableParallelism is not a function`, the process is o
 | `supabase/migrations/` | Postgres schema (RLS, includes, runs, media bucket) |
 | `e2e/` | Playwright (web) + Maestro (native) smoke harness |
 
-## Next build slices
+## Next work
 
-1. Supabase Auth adapter (email, Google, Apple)
-2. PowerSync (schema + RLS are in `supabase/migrations/`)
-3. Nesting (live include + cycle guard)
-4. Run / checkbox + inline expand
-5. Media queue + offline harden
+Execution queue is **Beads** (not this list). Product intent: [`.plans/v1-scope.md`](.plans/v1-scope.md) (gitignored). Agent rules + TDD: [`AGENTS.md`](./AGENTS.md).
+
+```bash
+bd ready              # unblocked work
+bd show reckoner-jt4  # v1 MVP milestone
+bd show reckoner-c25  # definition images (active trial)
+```
