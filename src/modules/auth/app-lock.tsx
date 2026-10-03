@@ -14,6 +14,10 @@ import { Text } from '@/components/Themed';
 import { useColorScheme } from '@/components/useColorScheme';
 import Colors from '@/constants/Colors';
 import { getContainer } from '@/src/di/container';
+import {
+  createAppLockGate,
+  type AppLockSnapshot,
+} from '@/src/modules/auth/app-lock-gate';
 import { useSession } from '@/src/modules/auth/session-context';
 
 type AppLockContextValue = {
@@ -28,104 +32,65 @@ type AppLockContextValue = {
 
 const AppLockContext = createContext<AppLockContextValue | null>(null);
 
+const idleSnapshot: AppLockSnapshot = {
+  available: false,
+  enabled: false,
+  ready: false,
+  locked: false,
+  label: 'Face ID',
+};
+
 export function AppLockProvider({ children }: { children: ReactNode }) {
   const { session, loading: sessionLoading } = useSession();
-  const biometrics = useMemo(() => getContainer().biometrics, []);
-  const [available, setAvailable] = useState(false);
-  const [enabled, setEnabled] = useState(false);
-  const [ready, setReady] = useState(false);
-  const [locked, setLocked] = useState(false);
-  const [label, setLabel] = useState('Face ID');
-  const authenticating = useRef(false);
-  const ignoreBackgroundUntil = useRef(0);
-  const bootstrapped = useRef(false);
+  const gate = useMemo(() => createAppLockGate(getContainer().biometrics), []);
+  const [snap, setSnap] = useState<AppLockSnapshot>(idleSnapshot);
+  const started = useRef(false);
 
   useEffect(() => {
-    let alive = true;
-    void (async () => {
-      const [nextAvailable, nextEnabled, nextLabel] = await Promise.all([
-        biometrics.isAvailable(),
-        biometrics.isLockEnabled(),
-        biometrics.label(),
-      ]);
-      if (!alive) return;
-      setAvailable(nextAvailable);
-      setEnabled(nextAvailable && nextEnabled);
-      setLabel(nextLabel);
-      setReady(true);
-    })();
-    return () => {
-      alive = false;
-    };
-  }, [biometrics]);
+    if (started.current || sessionLoading) return;
+    started.current = true;
+    void gate.bootstrap({ hasSession: Boolean(session) }).then(setSnap);
+  }, [gate, session, sessionLoading]);
 
   useEffect(() => {
-    if (!ready || sessionLoading || bootstrapped.current) return;
-    bootstrapped.current = true;
-    if (session && enabled) setLocked(true);
-  }, [ready, sessionLoading, session, enabled]);
-
-  useEffect(() => {
-    if (!session) setLocked(false);
-  }, [session]);
+    if (!snap.ready || sessionLoading) return;
+    setSnap(gate.setHasSession(Boolean(session)));
+  }, [session, sessionLoading, gate, snap.ready]);
 
   useEffect(() => {
     const sub = AppState.addEventListener('change', (next) => {
       if (next !== 'background') return;
-      if (authenticating.current) return;
-      if (Date.now() < ignoreBackgroundUntil.current) return;
-      if (session && enabled) setLocked(true);
+      setSnap(gate.lockForBackground({ hasSession: Boolean(session) }));
     });
     return () => sub.remove();
-  }, [session, enabled]);
-
-  const finishPrompt = () => {
-    authenticating.current = false;
-    ignoreBackgroundUntil.current = Date.now() + 1000;
-  };
+  }, [gate, session]);
 
   const unlock = useCallback(async () => {
-    authenticating.current = true;
-    try {
-      const ok = await biometrics.authenticate(`Unlock with ${label}`);
-      if (ok) setLocked(false);
-      return ok;
-    } finally {
-      finishPrompt();
-    }
-  }, [biometrics, label]);
+    const ok = await gate.unlock();
+    setSnap(gate.getState({ hasSession: Boolean(session) }));
+    return ok;
+  }, [gate, session]);
 
   const setLockEnabled = useCallback(
-    async (next: boolean) => {
-      authenticating.current = true;
-      try {
-        const ok = await biometrics.authenticate(next ? `Turn on ${label}` : `Turn off ${label}`);
-        if (!ok) return false;
-        await biometrics.setLockEnabled(next);
-        setEnabled(next);
-        if (!next) setLocked(false);
-        return true;
-      } finally {
-        finishPrompt();
-      }
+    async (enabled: boolean) => {
+      const ok = await gate.setLockEnabled(enabled);
+      setSnap(gate.getState({ hasSession: Boolean(session) }));
+      return ok;
     },
-    [biometrics, label],
+    [gate, session],
   );
 
   const value = useMemo<AppLockContextValue>(
     () => ({
-      available,
-      enabled,
-      ready,
-      locked:
-        Boolean(session) &&
-        enabled &&
-        (locked || (ready && !sessionLoading && !bootstrapped.current)),
-      label,
+      available: snap.available,
+      enabled: snap.enabled,
+      ready: snap.ready,
+      locked: snap.locked,
+      label: snap.label,
       unlock,
       setLockEnabled,
     }),
-    [available, enabled, ready, session, sessionLoading, locked, label, unlock, setLockEnabled],
+    [snap, unlock, setLockEnabled],
   );
 
   return <AppLockContext.Provider value={value}>{children}</AppLockContext.Provider>;
