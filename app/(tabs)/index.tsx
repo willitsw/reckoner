@@ -16,6 +16,7 @@ import { getContainer } from '@/src/di/container';
 import { processTitle } from '@/src/domain/process-title';
 import type { Process } from '@/src/domain/types';
 import { useSession } from '@/src/modules/auth/session-context';
+import { createProcessWithEntitlement } from '@/src/modules/billing/create-process-with-entitlement';
 
 export default function LibraryScreen() {
   const colorScheme = useColorScheme();
@@ -59,7 +60,8 @@ export default function LibraryScreen() {
     if (!session || creating) return;
     setCreating(true);
     try {
-      const created = await getContainer().processes.createProcess({
+      const { processes, entitlements } = getContainer();
+      const created = await createProcessWithEntitlement(entitlements, processes, {
         ownerId: session.user.id,
         title: 'Untitled process',
       });

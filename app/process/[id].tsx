@@ -15,6 +15,7 @@ import { useColorScheme } from '@/components/useColorScheme';
 import { processTitle } from '@/src/domain/process-title';
 import type { MediaAsset, Process, ProcessId, Step, StepKind } from '@/src/domain/types';
 import { getContainer } from '@/src/di/container';
+import { createProcessWithEntitlement } from '@/src/modules/billing/create-process-with-entitlement';
 import { IncludePicker } from '@/src/modules/process/include-picker';
 import { MediaStrip } from '@/src/modules/process/media-strip';
 import { positionAfterMove } from '@/src/modules/process/order';
@@ -347,16 +348,17 @@ export default function ProcessDetailScreen() {
             await load();
           }}
           onCreate={async () => {
-            const created = await getContainer().processes.createProcess({
+            const { processes, entitlements } = getContainer();
+            const created = await createProcessWithEntitlement(entitlements, processes, {
               ownerId: process.ownerId,
               title: '',
             });
             try {
-              await getContainer().processes.updateStep(pickingStepId, {
+              await processes.updateStep(pickingStepId, {
                 childProcessId: created.id,
               });
             } catch (error) {
-              await getContainer().processes.deleteProcess(created.id);
+              await processes.deleteProcess(created.id);
               throw error;
             }
             setPickingStepId(null);
