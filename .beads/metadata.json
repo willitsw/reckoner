@@ -1,0 +1,7 @@
+{
+  "database": "dolt",
+  "backend": "dolt",
+  "dolt_mode": "embedded",
+  "dolt_database": "reckoner",
+  "project_id": "4cde8e62-8dc4-4a0e-ba59-ca2df496a6d3"
+}
