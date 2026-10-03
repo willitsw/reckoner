@@ -13,8 +13,10 @@ import {
   requiredProgress,
   type RunNode,
 } from '@/src/domain/run';
-import type { Process, Run, Step } from '@/src/domain/types';
+import type { MediaAsset, Process, ProcessId, Run, Step } from '@/src/domain/types';
 import { getContainer } from '@/src/di/container';
+import { groupDefinitionMedia } from '@/src/modules/process/group-definition-media';
+import { DefinitionMediaView } from '@/src/modules/process/media-strip';
 
 export default function RunScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
@@ -24,6 +26,7 @@ export default function RunScreen() {
   const [process, setProcess] = useState<Process | null>(null);
   const [run, setRun] = useState<Run | null>(null);
   const [nodes, setNodes] = useState<RunNode[]>([]);
+  const [mediaByProcess, setMediaByProcess] = useState<Map<ProcessId, MediaAsset[]>>(new Map());
   const [checked, setChecked] = useState<Set<string>>(new Set());
   const [error, setError] = useState<string | null>(null);
   const [ready, setReady] = useState(false);
@@ -32,11 +35,13 @@ export default function RunScreen() {
   const load = useCallback(async () => {
     if (!id) return;
     const repo = getContainer().processes;
+    const mediaRepo = getContainer().media;
     const loaded = await repo.getProcess(id);
     setProcess(loaded);
     if (!loaded || loaded.deletedAt) {
       setRun(null);
       setNodes([]);
+      setMediaByProcess(new Map());
       setChecked(new Set());
       setReady(true);
       return;
@@ -44,6 +49,7 @@ export default function RunScreen() {
 
     const processes = new Map<string, Process>();
     const stepsByProcess = new Map<string, Step[]>();
+    const nextMedia = new Map<ProcessId, MediaAsset[]>();
     const queue = [loaded.id];
     const seen = new Set<string>();
     while (queue.length > 0) {
@@ -55,6 +61,7 @@ export default function RunScreen() {
       if (!current || current.deletedAt) continue;
       const steps = await repo.listSteps(processId);
       stepsByProcess.set(processId, steps);
+      nextMedia.set(processId, await mediaRepo.listForProcess(processId));
       for (const step of steps) {
         if (step.childProcessId) queue.push(step.childProcessId);
       }
@@ -64,6 +71,7 @@ export default function RunScreen() {
     const checks = await getContainer().runs.listChecks(opened.id);
     setRun(opened);
     setNodes(expandRun({ processId: loaded.id, processes, stepsByProcess }));
+    setMediaByProcess(nextMedia);
     setChecked(new Set(checks.map((check) => check.occurrencePath)));
     setReady(true);
   }, [id]);
@@ -101,14 +109,23 @@ export default function RunScreen() {
 
   const progress = requiredProgress(nodes, checked);
   const complete = isRunComplete(nodes, checked);
+  const rootGrouped = groupDefinitionMedia(mediaByProcess.get(process.id) ?? []);
+  const processCover = rootGrouped.processLevel.find((asset) => asset.isCover) ?? null;
+  const processImages = processCover
+    ? rootGrouped.processLevel.filter((asset) => asset.id !== processCover.id)
+    : rootGrouped.processLevel;
 
   return (
     <View testID="run-screen" style={[styles.screen, { backgroundColor: colors.background }]}>
       <Stack.Screen options={{ title: processTitle(process.title) }} />
       <ScrollView contentContainerStyle={styles.scroll} keyboardShouldPersistTaps="handled">
+        {processCover ? (
+          <DefinitionMediaView assets={[processCover]} testID="run-process-cover" coverOnly />
+        ) : null}
         {process.notes.trim() ? (
           <Text style={[styles.notes, { color: colors.textSecondary }]}>{process.notes}</Text>
         ) : null}
+        <DefinitionMediaView assets={processImages} testID="run-process-media" />
         {progress.total > 0 ? (
           <Text
             testID="run-progress"
@@ -136,6 +153,7 @@ export default function RunScreen() {
             nodes={nodes}
             depth={0}
             checked={checked}
+            mediaByProcess={mediaByProcess}
             onToggle={(node) =>
               void runAction(async () => {
                 if (!run) return;
@@ -209,17 +227,26 @@ function RunNodes({
   nodes,
   depth,
   checked,
+  mediaByProcess,
   onToggle,
 }: {
   nodes: RunNode[];
   depth: number;
   checked: Set<string>;
+  mediaByProcess: Map<ProcessId, MediaAsset[]>;
   onToggle: (node: RunNode) => void;
 }) {
   return (
     <View style={{ gap: 8, marginLeft: depth === 0 ? 0 : 16 }}>
       {nodes.map((node) => (
-        <RunRow key={node.path} node={node} depth={depth} checked={checked} onToggle={onToggle} />
+        <RunRow
+          key={node.path}
+          node={node}
+          depth={depth}
+          checked={checked}
+          mediaByProcess={mediaByProcess}
+          onToggle={onToggle}
+        />
       ))}
     </View>
   );
@@ -229,11 +256,13 @@ function RunRow({
   node,
   depth,
   checked,
+  mediaByProcess,
   onToggle,
 }: {
   node: RunNode;
   depth: number;
   checked: Set<string>;
+  mediaByProcess: Map<ProcessId, MediaAsset[]>;
   onToggle: (node: RunNode) => void;
 }) {
   const colorScheme = useColorScheme();
@@ -241,6 +270,14 @@ function RunRow({
   const action = node.step.kind === 'action';
   const explicit = checked.has(node.path);
   const boxOn = action && (node.step.optional ? explicit : isSatisfied(node, checked));
+  const stepMedia =
+    groupDefinitionMedia(mediaByProcess.get(node.step.processId) ?? []).byStepId.get(
+      node.step.id,
+    ) ?? [];
+  const stepMediaStrip =
+    stepMedia.length > 0 ? (
+      <DefinitionMediaView assets={stepMedia} testID={`run-step-media-${node.path}`} />
+    ) : null;
 
   return (
     <View style={styles.node}>
@@ -276,7 +313,8 @@ function RunRow({
           node.include?.unavailable ||
           node.include?.truncated ||
           node.step.notes.trim() ||
-          node.step.url ? (
+          node.step.url ||
+          stepMedia.length > 0 ? (
             <View style={styles.detail}>
               {node.step.optional ? (
                 <Text style={{ color: colors.textSecondary, fontSize: 13 }}>Optional</Text>
@@ -304,6 +342,7 @@ function RunRow({
                   <Text style={{ color: colors.tint, fontSize: 14 }}>{node.step.url}</Text>
                 </Pressable>
               ) : null}
+              {stepMediaStrip}
             </View>
           ) : null}
         </View>
@@ -311,9 +350,16 @@ function RunRow({
       {node.step.kind !== 'action' && node.step.notes.trim() ? (
         <Text style={{ color: colors.textSecondary, fontSize: 14, lineHeight: 20 }}>{node.step.notes}</Text>
       ) : null}
+      {node.step.kind !== 'action' ? stepMediaStrip : null}
 
       {node.include && !node.include.unavailable && !node.include.truncated ? (
-        <RunNodes nodes={node.include.nodes} depth={depth + 1} checked={checked} onToggle={onToggle} />
+        <RunNodes
+          nodes={node.include.nodes}
+          depth={depth + 1}
+          checked={checked}
+          mediaByProcess={mediaByProcess}
+          onToggle={onToggle}
+        />
       ) : null}
     </View>
   );
