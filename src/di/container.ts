@@ -18,7 +18,7 @@ import {
   createSupabaseStorageMediaRepository,
   readLocalMediaFile,
 } from '@/src/adapters/supabase/media-repository';
-import { withLocalWipe } from '@/src/modules/account/with-local-wipe';
+import { withLocalWipe, withSignOutLocalWipe } from '@/src/modules/account/with-local-wipe';
 import type { AccountPort } from '@/src/ports/account';
 import type { AuthPort } from '@/src/ports/auth';
 import type { BiometricPort } from '@/src/ports/biometric';
@@ -91,8 +91,9 @@ export function getContainer(): AppContainer {
 
   // Feature-facing media stays memory. Online Storage path:
   // createOnlineMediaRepository(supabase, processes) — for reckoner-q4o.
+  // Sign-out and account delete both wipe local library (PowerSync disconnectAndClear).
   container = {
-    auth,
+    auth: withSignOutLocalWipe(auth, processes),
     account: withLocalWipe(account, processes),
     biometrics: createExpoBiometricAdapter(),
     processes,
