@@ -13,4 +13,30 @@ const { getDefaultConfig } = require('expo/metro-config');
 /** @type {import('expo/metro-config').MetroConfig} */
 const config = getDefaultConfig(__dirname);
 
+// PowerSync RN SDK breaks with Metro inlineRequires (Super expression must either be null…).
+const previousGetTransformOptions = config.transformer?.getTransformOptions;
+config.transformer = {
+  ...config.transformer,
+  getTransformOptions: async () => {
+    const prior = previousGetTransformOptions ? await previousGetTransformOptions() : {};
+    return {
+      ...prior,
+      transform: {
+        ...prior.transform,
+        inlineRequires: {
+          ...(typeof prior.transform?.inlineRequires === 'object'
+            ? prior.transform.inlineRequires
+            : {}),
+          blockList: {
+            ...(typeof prior.transform?.inlineRequires === 'object'
+              ? prior.transform.inlineRequires.blockList
+              : {}),
+            [require.resolve('@powersync/react-native')]: true,
+          },
+        },
+      },
+    };
+  },
+};
+
 module.exports = config;
