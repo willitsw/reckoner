@@ -16,6 +16,18 @@ export type AuthCallbackResult = {
   error: string | null;
 };
 
+/** Vendor-neutral OAuth providers supported for SSO. */
+export type OAuthProvider = 'google' | 'apple';
+
+/**
+ * Outcome of an interactive provider sign-in. Cancel and error do not throw so
+ * the UI can distinguish dismiss from failure without try/catch heuristics.
+ */
+export type SignInWithProviderResult =
+  | { status: 'signed-in'; session: AuthSession }
+  | { status: 'cancelled' }
+  | { status: 'error'; message: string };
+
 /**
  * Identity and session. Implementations: Supabase, test doubles, etc.
  * Face ID unlock is a separate local gate (BiometricPort), not a provider.
@@ -24,6 +36,11 @@ export interface AuthPort {
   getSession(): Promise<AuthSession | null>;
   signInWithPassword(email: string, password: string): Promise<AuthSession>;
   signUpWithPassword(email: string, password: string): Promise<SignUpResult>;
+  /**
+   * Interactive Google/Apple sign-in. Success also notifies onAuthStateChange.
+   * Cancelled and error outcomes leave the current session unchanged.
+   */
+  signInWithProvider(provider: OAuthProvider): Promise<SignInWithProviderResult>;
   /** Always resolves when the request is accepted. Does not reveal whether the email exists. */
   requestPasswordReset(email: string): Promise<void>;
   /** Confirms the current password. Required before delete and password change. */

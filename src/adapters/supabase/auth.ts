@@ -1,5 +1,6 @@
 import type { AuthChangeEvent, Session, SupabaseClient } from '@supabase/supabase-js';
 import * as Linking from 'expo-linking';
+import * as WebBrowser from 'expo-web-browser';
 import { Platform } from 'react-native';
 
 import type {
@@ -7,8 +8,12 @@ import type {
   AuthEvent,
   AuthPort,
   AuthSession,
+  OAuthProvider,
+  SignInWithProviderResult,
   SignUpResult,
 } from '@/src/ports/auth';
+
+WebBrowser.maybeCompleteAuthSession();
 
 function toAuthSession(session: Session | null): AuthSession | null {
   if (!session?.user) return null;
@@ -53,8 +58,8 @@ function authParams(url: string): URLSearchParams {
 }
 
 /**
- * Supabase Auth adapter. Email/password, reset, and email deep links.
- * SSO is a later slice.
+ * Supabase Auth adapter. Email/password, OAuth (Google/Apple), reset, and
+ * email deep links. Feature UI must call AuthPort — never supabase-js.
  */
 export function createSupabaseAuthAdapter(client: SupabaseClient): AuthPort {
   let recoveryPending = false;
@@ -62,6 +67,51 @@ export function createSupabaseAuthAdapter(client: SupabaseClient): AuthPort {
   client.auth.onAuthStateChange((event) => {
     if (event === 'PASSWORD_RECOVERY') recoveryPending = true;
   });
+
+  async function sessionFromOAuthUrl(url: string): Promise<SignInWithProviderResult> {
+    let params: URLSearchParams;
+    try {
+      params = authParams(url);
+    } catch {
+      return { status: 'error', message: 'Sign-in callback was invalid.' };
+    }
+
+    const errorDescription = params.get('error_description');
+    if (params.get('error') || errorDescription) {
+      return {
+        status: 'error',
+        message: errorDescription?.replace(/\+/g, ' ') ?? 'Sign-in did not complete.',
+      };
+    }
+
+    const code = params.get('code');
+    if (code) {
+      const { data, error } = await client.auth.exchangeCodeForSession(code);
+      if (error) return { status: 'error', message: error.message };
+      const session = toAuthSession(data.session);
+      if (!session) {
+        return { status: 'error', message: 'Sign in succeeded but no session was returned.' };
+      }
+      return { status: 'signed-in', session };
+    }
+
+    const accessToken = params.get('access_token');
+    const refreshToken = params.get('refresh_token');
+    if (!accessToken || !refreshToken) {
+      return { status: 'error', message: 'Sign-in did not complete.' };
+    }
+
+    const { data, error } = await client.auth.setSession({
+      access_token: accessToken,
+      refresh_token: refreshToken,
+    });
+    if (error) return { status: 'error', message: error.message };
+    const session = toAuthSession(data.session);
+    if (!session) {
+      return { status: 'error', message: 'Sign in succeeded but no session was returned.' };
+    }
+    return { status: 'signed-in', session };
+  }
 
   return {
     async getSession() {
@@ -87,6 +137,29 @@ export function createSupabaseAuthAdapter(client: SupabaseClient): AuthPort {
       if (error) throw error;
       if (!data.session) return { status: 'confirm-email' };
       return { status: 'signed-in' };
+    },
+
+    async signInWithProvider(provider: OAuthProvider): Promise<SignInWithProviderResult> {
+      const redirectTo = Linking.createURL('/');
+      const { data, error } = await client.auth.signInWithOAuth({
+        provider,
+        options: {
+          redirectTo,
+          skipBrowserRedirect: true,
+        },
+      });
+      if (error) return { status: 'error', message: error.message };
+      if (!data.url) return { status: 'error', message: 'Could not start sign-in.' };
+
+      const browserResult = await WebBrowser.openAuthSessionAsync(data.url, redirectTo);
+      if (browserResult.type === 'cancel' || browserResult.type === 'dismiss') {
+        return { status: 'cancelled' };
+      }
+      if (browserResult.type !== 'success' || !browserResult.url) {
+        return { status: 'error', message: 'Sign-in did not complete.' };
+      }
+
+      return sessionFromOAuthUrl(browserResult.url);
     },
 
     async requestPasswordReset(email) {
