@@ -13,7 +13,8 @@ export function groupDefinitionMedia(assets: readonly MediaAsset[]): GroupedDefi
   let cover: MediaAsset | null = null;
 
   for (const asset of assets) {
-    if (asset.isCover && cover === null) cover = asset;
+    // Cover is image-only; audio never carries isCover but ignore non-images defensively.
+    if (asset.kind === 'image' && asset.isCover && cover === null) cover = asset;
     if (asset.stepId === null) {
       processLevel.push(asset);
       continue;
