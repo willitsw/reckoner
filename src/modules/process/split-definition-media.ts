@@ -5,7 +5,7 @@ export function definitionImages(assets: readonly MediaAsset[]): MediaAsset[] {
   return assets.filter((asset) => asset.kind === 'image');
 }
 
-/** Audio for the editor audio strip (run playback is a separate bead). */
+/** Audio for the editor strip and read-only run playback. */
 export function definitionAudio(assets: readonly MediaAsset[]): MediaAsset[] {
   return assets.filter((asset) => asset.kind === 'audio');
 }

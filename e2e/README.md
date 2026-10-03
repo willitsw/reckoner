@@ -47,6 +47,8 @@ Default app id is `com.reckoner.app`. Entry flow: `e2e/maestro/smoke.yaml` (shar
 
 Maestro/Playwright smoke for record/attach is skipped: Expo AV recording needs a real mic and cannot be stubbed in the current harness. Editor testIDs: `process-attach-audio`, `process-record-audio`, `process-audio`, `step-attach-audio-*`, `step-record-audio-*`, `step-audio-*`, plus shared `media-row-*` / `media-caption-*` / `media-remove-*`.
 
+Run-screen playback (read-only): `run-process-audio`, `run-step-audio-*`, `media-play-*`. Playback URI resolution is covered by `tests/definition-audio-playback.test.ts`.
+
 ## Library lifecycle
 
 - `archive` — archive hides from library, shows under Archived, unarchive restores
