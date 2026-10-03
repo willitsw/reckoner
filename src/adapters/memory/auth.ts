@@ -1,14 +1,33 @@
-import type { AuthCallbackResult, AuthPort, AuthSession, SignUpResult } from '@/src/ports/auth';
+import type {
+  AuthCallbackResult,
+  AuthEvent,
+  AuthPort,
+  AuthSession,
+  OAuthProvider,
+  SignInWithProviderResult,
+  SignUpResult,
+} from '@/src/ports/auth';
+
+export type MemoryOAuthBehavior =
+  | { behavior?: 'success' }
+  | { behavior: 'cancelled' }
+  | { behavior: 'error'; message: string };
+
+export type MemoryAuthOptions = {
+  /** Controls `signInWithProvider` outcomes for tests and scaffolding. Defaults to success. */
+  oauth?: MemoryOAuthBehavior;
+};
 
 /**
  * In-memory auth for UI scaffolding before Supabase is wired.
  * Password reset and email confirmation are no-ops: there is no mail to send.
  */
-export function createMemoryAuthAdapter(): AuthPort {
+export function createMemoryAuthAdapter(options: MemoryAuthOptions = {}): AuthPort {
   let session: AuthSession | null = null;
-  const listeners = new Set<(s: AuthSession | null, event: 'signed-in' | 'signed-out') => void>();
+  const listeners = new Set<(s: AuthSession | null, event: AuthEvent) => void>();
+  const oauth = options.oauth ?? { behavior: 'success' };
 
-  const emit = (event: 'signed-in' | 'signed-out') => {
+  const emit = (event: AuthEvent) => {
     for (const listener of listeners) listener(session, event);
   };
 
@@ -27,6 +46,22 @@ export function createMemoryAuthAdapter(): AuthPort {
     async signUpWithPassword(email, password): Promise<SignUpResult> {
       await this.signInWithPassword(email, password);
       return { status: 'signed-in' };
+    },
+    async signInWithProvider(provider: OAuthProvider): Promise<SignInWithProviderResult> {
+      if (oauth.behavior === 'cancelled') {
+        return { status: 'cancelled' };
+      }
+      if (oauth.behavior === 'error') {
+        return { status: 'error', message: oauth.message };
+      }
+
+      const email = provider === 'apple' ? 'apple-user@example.com' : 'google-user@example.com';
+      session = {
+        user: { id: `memory-${provider}-user`, email },
+        accessToken: `memory-${provider}-token`,
+      };
+      emit('signed-in');
+      return { status: 'signed-in', session };
     },
     async requestPasswordReset() {},
     async reauthenticate(password) {
