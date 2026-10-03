@@ -1,3 +1,5 @@
+import type { SupabaseClient } from '@supabase/supabase-js';
+
 import { createExpoBiometricAdapter } from '@/src/adapters/expo/biometric';
 import { createMemoryAccountAdapter } from '@/src/adapters/memory/account';
 import { createMemoryAuthAdapter } from '@/src/adapters/memory/auth';
@@ -6,6 +8,10 @@ import { createMemoryLibrary } from '@/src/adapters/memory/process-repository';
 import { createSupabaseAccountAdapter } from '@/src/adapters/supabase/account';
 import { createSupabaseAuthAdapter } from '@/src/adapters/supabase/auth';
 import { createSupabaseClient } from '@/src/adapters/supabase/client';
+import {
+  createSupabaseStorageMediaRepository,
+  readLocalMediaFile,
+} from '@/src/adapters/supabase/media-repository';
 import { withLocalWipe } from '@/src/modules/account/with-local-wipe';
 import type { AccountPort } from '@/src/ports/account';
 import type { AuthPort } from '@/src/ports/auth';
@@ -30,7 +36,23 @@ export type AppContainer = {
 let container: AppContainer | null = null;
 
 /**
- * Composition root. Auth uses Supabase when env is set; other ports stay memory for now.
+ * Online Storage + `media_assets` MediaRepository. Ready for the upload queue
+ * (reckoner-q4o). Not the app default — features keep using memory/`media`.
+ */
+export function createOnlineMediaRepository(
+  client: SupabaseClient,
+  processes: ProcessRepository,
+): MediaRepository {
+  return createSupabaseStorageMediaRepository(client, {
+    processes,
+    readLocalFile: readLocalMediaFile,
+  });
+}
+
+/**
+ * Composition root. Auth uses Supabase when env is set; library + media stay
+ * memory so unit/CI keep the memory-default DI. Online media is available via
+ * {@link createOnlineMediaRepository} when Supabase is configured.
  */
 export function getContainer(): AppContainer {
   if (container) return container;
@@ -41,6 +63,8 @@ export function getContainer(): AppContainer {
   const processes = library.processes;
   const account = supabase ? createSupabaseAccountAdapter(supabase) : createMemoryAccountAdapter(auth);
 
+  // Feature-facing media stays memory. Online Storage path:
+  // createOnlineMediaRepository(supabase, processes) — for reckoner-q4o.
   container = {
     auth,
     account: withLocalWipe(account, processes),
