@@ -342,8 +342,8 @@ export function createSupabaseMediaAssetsStore(client: SupabaseClient): MediaAss
 
 /**
  * Wire Storage + `media_assets` for the online path. Callers still pass a
- * ProcessRepository (memory today; sync later). Upload queue (reckoner-q4o)
- * will sit in front of attachImage.
+ * ProcessRepository. The device-local upload queue drains through
+ * `attachImage` (upload then row); pending jobs never live in this store.
  */
 export function createSupabaseStorageMediaRepository(
   client: SupabaseClient,

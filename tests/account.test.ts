@@ -3,11 +3,13 @@ import { describe, it } from 'node:test';
 
 import { createMemoryAccountAdapter } from '../src/adapters/memory/account';
 import { createMemoryAuthAdapter } from '../src/adapters/memory/auth';
+import { createMemoryMediaUploadQueue } from '../src/adapters/memory/media-upload-queue';
 import { createMemoryProcessRepository } from '../src/adapters/memory/process-repository';
 import { DISPLAY_NAME_MAX_LENGTH } from '../src/domain/display-name';
 import { withLocalWipe } from '../src/modules/account/with-local-wipe';
 import type { AccountPort } from '../src/ports/account';
 import type { AuthPort } from '../src/ports/auth';
+import type { MediaRepository } from '../src/ports/media-repository';
 
 function signedInAccount() {
   const auth = createMemoryAuthAdapter();
@@ -91,6 +93,36 @@ describe('account', () => {
 
     assert.equal(await processes.getProcess(created.id), null);
     assert.deepEqual(await processes.listProcesses(session.user.id), []);
+  });
+
+  it('delete also clears the media upload queue', async () => {
+    const { auth, account } = signedInAccount();
+    const processes = createMemoryProcessRepository();
+    const unusedMedia: MediaRepository = {
+      listForProcess: async () => [],
+      listForStep: async () => [],
+      attachImage: async () => {
+        throw new Error('should not attach during wipe test');
+      },
+      updateMedia: async () => {
+        throw new Error('unused');
+      },
+      softDelete: async () => {},
+      clearLocal: async () => {},
+    };
+    const queue = createMemoryMediaUploadQueue({
+      media: unusedMedia,
+      isOnline: () => false,
+    });
+    const deleting: AccountPort = withLocalWipe(account, processes, [queue]);
+    const session = await signIn(auth);
+    const created = await processes.createProcess({ ownerId: session.user.id, title: 'Queue wipe' });
+    await queue.enqueue({ processId: created.id, storagePath: 'file:///local/x.jpg' });
+    assert.equal((await queue.listPending()).length, 1);
+
+    await deleting.deleteAccount();
+
+    assert.deepEqual(await queue.listPending(), []);
   });
 
   it('does not clear local processes when delete fails', async () => {
