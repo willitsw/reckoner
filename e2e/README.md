@@ -81,7 +81,7 @@ Walked against shared Expo Router screens (same UI package). Intentional platfor
 | 2 | CRUD + search | Yes | Yes | Search E2E on both harnesses. |
 | 3 | Live nested include | Yes | Yes | Include + nested-run E2E. |
 | 4 | Run / resume / Done | Yes | Yes | Smoke + nested-run. |
-| 5 | Definition images / notes | Yes | Yes | Web: Add image only. iOS: Add image + Camera (`media-strip`). Audio deferred. |
+| 5 | Definition images / notes / audio | Yes | Yes | Web: Add image (+ audio attach/record where platform allows). iOS: Add image + Camera. Audio E2E skipped (mic). |
 | 6 | Offline + sync | Partial | Primary | Web weaker by design (see `.plans/architecture.md`). Not E2E-automated here. |
 | 7 | Face ID / biometrics | N/A | Yes | Account shows unavailable on web; toggle only when hardware available. |
 | 8 | Same account library | Infra | Infra | Needs real Supabase + PowerSync; not memory-E2E. |
@@ -93,7 +93,7 @@ These stay out of the green CI harness (device, OS, or cloud dependent). Follow-
 
 | Gap | Why not E2E here | Tracking |
 |-----|------------------|----------|
-| Definition **audio** capture UI | Port/`attachAudio` exists; no authoring control yet on either platform | `reckoner-ws6` (+ `reckoner-xer` play-on-run) |
+| Definition **audio** E2E | Mic/AV cannot be stubbed in CI; UI + testIDs exist (see “Definition audio” above) | `reckoner-ws6` / play-on-run `reckoner-xer` |
 | True offline / sync / cross-device | Requires Supabase + PowerSync + network control | `reckoner-z1f` |
 | Face ID unlock path | Needs enrolled biometrics on a device; account lock toggle lacks dedicated testIDs for Maestro | `reckoner-jt4.1` |
 | Native camera capture | Simulator/CI has no reliable camera; Camera control is iOS-only | intentional; not a web gap |
