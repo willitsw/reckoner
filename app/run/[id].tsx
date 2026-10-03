@@ -110,20 +110,17 @@ export default function RunScreen() {
   const progress = requiredProgress(nodes, checked);
   const complete = isRunComplete(nodes, checked);
   const rootGrouped = groupDefinitionMedia(mediaByProcess.get(process.id) ?? []);
-  const processImages = rootGrouped.cover
-    ? rootGrouped.processLevel.filter((asset) => asset.id !== rootGrouped.cover!.id)
+  const processCover = rootGrouped.processLevel.find((asset) => asset.isCover) ?? null;
+  const processImages = processCover
+    ? rootGrouped.processLevel.filter((asset) => asset.id !== processCover.id)
     : rootGrouped.processLevel;
 
   return (
     <View testID="run-screen" style={[styles.screen, { backgroundColor: colors.background }]}>
       <Stack.Screen options={{ title: processTitle(process.title) }} />
       <ScrollView contentContainerStyle={styles.scroll} keyboardShouldPersistTaps="handled">
-        {rootGrouped.cover ? (
-          <DefinitionMediaView
-            assets={[rootGrouped.cover]}
-            testID="run-process-cover"
-            coverOnly
-          />
+        {processCover ? (
+          <DefinitionMediaView assets={[processCover]} testID="run-process-cover" coverOnly />
         ) : null}
         {process.notes.trim() ? (
           <Text style={[styles.notes, { color: colors.textSecondary }]}>{process.notes}</Text>
@@ -279,7 +276,7 @@ function RunRow({
     ) ?? [];
   const stepMediaStrip =
     stepMedia.length > 0 ? (
-      <DefinitionMediaView assets={stepMedia} testID={`run-step-media-${node.step.id}`} />
+      <DefinitionMediaView assets={stepMedia} testID={`run-step-media-${node.path}`} />
     ) : null;
 
   return (
