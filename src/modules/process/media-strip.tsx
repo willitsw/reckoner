@@ -6,6 +6,8 @@ import Colors from '@/constants/Colors';
 import { useColorScheme } from '@/components/useColorScheme';
 import { getContainer } from '@/src/di/container';
 import type { MediaAsset, ProcessId, StepId } from '@/src/domain/types';
+import { useSession } from '@/src/modules/auth/session-context';
+import { assertEntitlement } from '@/src/modules/billing/assert-entitlement';
 import { filterPendingMediaForTarget } from '@/src/modules/process/filter-pending-media';
 import { captureImage, pickImage } from '@/src/modules/process/pick-image';
 import type { PendingMediaUpload } from '@/src/ports/media-upload-queue';
@@ -90,6 +92,7 @@ export function MediaStrip({
 }) {
   const colorScheme = useColorScheme();
   const colors = Colors[colorScheme];
+  const { session } = useSession();
   const [busy, setBusy] = useState(false);
   const [pending, setPending] = useState<PendingMediaUpload[]>([]);
   const attachTestId =
@@ -127,10 +130,14 @@ export function MediaStrip({
 
   async function attach(from: 'library' | 'camera') {
     await run(async () => {
+      if (!session) throw new Error('Sign in to attach images.');
+      const { entitlements, mediaUploadQueue } = getContainer();
+      const decision = await assertEntitlement(entitlements, session.user.id, 'attach_media');
+      if (!decision.allowed) throw new Error('Upgrade to attach more media.');
+
       const picked = from === 'camera' ? await captureImage() : await pickImage();
       if (!picked) return;
-      const queue = getContainer().mediaUploadQueue;
-      await queue.enqueue({
+      await mediaUploadQueue.enqueue({
         processId,
         stepId,
         storagePath: picked.uri,
@@ -138,7 +145,7 @@ export function MediaStrip({
         byteSize: picked.byteSize,
       });
       // Drain when online; offline defers without throwing.
-      await queue.drain();
+      await mediaUploadQueue.drain();
     });
   }
 
