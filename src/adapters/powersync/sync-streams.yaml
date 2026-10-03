@@ -1,0 +1,12 @@
+# Deploy to the PowerSync instance linked to Supabase (infra follow-up).
+# Prefer Sync Streams; equivalent legacy Sync Rules are in .plans/powersync-spike.md.
+streams:
+  user_data:
+    auto_subscribe: true
+    queries:
+      - SELECT * FROM profiles WHERE id = auth.user_id()
+      - SELECT * FROM processes WHERE owner_id = auth.user_id()
+      - SELECT * FROM steps WHERE owner_id = auth.user_id()
+      - SELECT * FROM media_assets WHERE owner_id = auth.user_id()
+      - SELECT * FROM runs WHERE owner_id = auth.user_id()
+      - SELECT * FROM run_checks WHERE owner_id = auth.user_id()

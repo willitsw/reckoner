@@ -6,7 +6,7 @@ Application code. Expo Router screens in `/app` stay thin and call into modules 
 |------|------|
 | `domain/` | Pure types and logic (no I/O) |
 | `ports/` | Interfaces features depend on (`processes`, `runs`, `media`) |
-| `adapters/` | Vendor / infra implementations (`supabase/` = auth, password recovery, account profile; `local/` = offline profile cache; `expo/` = biometric app lock). Processes, runs, and definition media still memory. Postgres schema lives in `/supabase/migrations/`. |
+| `adapters/` | Vendor / infra implementations (`supabase/` = auth, password recovery, account profile; `powersync/` = offline SQLite sync for processes when env configured; `local/` = offline profile cache; `expo/` = biometric app lock). Runs and definition media still memory. Postgres schema lives in `/supabase/migrations/`. |
 | `di/` | Composition root — wire adapters once |
 | `modules/` | Feature UI helpers and screens' logic (`account/` wipe-on-delete, `process/` step order, include picker, run view) |
 
