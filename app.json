@@ -13,7 +13,8 @@
       "infoPlist": {
         "NSFaceIDUsageDescription": "Reckoner uses Face ID to unlock the app on this device.",
         "NSPhotoLibraryUsageDescription": "Reckoner attaches photos to your how-to steps.",
-        "NSCameraUsageDescription": "Reckoner lets you photograph a step while writing a process."
+        "NSCameraUsageDescription": "Reckoner lets you photograph a step while writing a process.",
+        "NSMicrophoneUsageDescription": "Reckoner records voice notes on your how-to steps."
       }
     },
 
@@ -48,6 +49,12 @@
         {
           "photosPermission": "Reckoner attaches photos to your how-to steps.",
           "cameraPermission": "Reckoner lets you photograph a step while writing a process."
+        }
+      ],
+      [
+        "expo-av",
+        {
+          "microphonePermission": "Reckoner records voice notes on your how-to steps."
         }
       ]
     ],

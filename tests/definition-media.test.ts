@@ -76,4 +76,28 @@ describe('groupDefinitionMedia', () => {
     assert.equal(grouped.byStepId.size, 0);
     assert.equal(grouped.cover, null);
   });
+
+  it('never picks audio as cover even if listed first', () => {
+    const audio = asset({
+      id: 'a1',
+      processId: 'p1',
+      kind: 'audio',
+      storagePath: 'file:///note.m4a',
+      contentType: 'audio/mp4',
+      isCover: false,
+      position: 'a',
+    });
+    const image = asset({
+      id: 'm1',
+      processId: 'p1',
+      isCover: true,
+      position: 'b',
+    });
+    const grouped = groupDefinitionMedia([audio, image]);
+    assert.equal(grouped.cover?.id, 'm1');
+    assert.deepEqual(
+      grouped.processLevel.map((item) => item.id),
+      ['a1', 'm1'],
+    );
+  });
 });
