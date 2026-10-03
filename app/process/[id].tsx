@@ -13,9 +13,10 @@ import { Text } from '@/components/Themed';
 import Colors from '@/constants/Colors';
 import { useColorScheme } from '@/components/useColorScheme';
 import { processTitle } from '@/src/domain/process-title';
-import type { Process, ProcessId, Step, StepKind } from '@/src/domain/types';
+import type { MediaAsset, Process, ProcessId, Step, StepKind } from '@/src/domain/types';
 import { getContainer } from '@/src/di/container';
 import { IncludePicker } from '@/src/modules/process/include-picker';
+import { MediaStrip } from '@/src/modules/process/media-strip';
 import { positionAfterMove } from '@/src/modules/process/order';
 
 const KINDS: { kind: StepKind; label: string }[] = [
@@ -31,6 +32,7 @@ export default function ProcessDetailScreen() {
   const colors = Colors[colorScheme];
   const [process, setProcess] = useState<Process | null>(null);
   const [steps, setSteps] = useState<Step[]>([]);
+  const [mediaAssets, setMediaAssets] = useState<MediaAsset[]>([]);
   const [included, setIncluded] = useState<Record<string, Process | null>>({});
   const [pickingStepId, setPickingStepId] = useState<string | null>(null);
   const [title, setTitle] = useState('');
@@ -67,6 +69,9 @@ export default function ProcessDetailScreen() {
     );
     setIncluded(children);
     setSteps(nextSteps);
+    setMediaAssets(
+      loaded && !loaded.deletedAt ? await getContainer().media.listForProcess(loaded.id) : [],
+    );
     setHasRun(loaded ? (await getContainer().runs.getInProgressRun(loaded.id)) !== null : false);
     setReady(true);
   }, [id]);
@@ -215,12 +220,22 @@ export default function ProcessDetailScreen() {
           completion. An action can include another process.
         </Text>
 
+        <MediaStrip
+          processId={process.id}
+          stepId={null}
+          assets={mediaAssets.filter((asset) => asset.stepId === null)}
+          onChanged={load}
+          onError={setError}
+          disabled={archived}
+        />
+
         {steps.map((step, index) => (
           <StepCard
             key={step.id}
             step={step}
             index={index}
             total={steps.length}
+            media={mediaAssets.filter((asset) => asset.stepId === step.id)}
             onChange={(patch) => void run(() => getContainer().processes.updateStep(step.id, patch))}
             onMove={(toIndex) =>
               void run(async () => {
@@ -229,6 +244,9 @@ export default function ProcessDetailScreen() {
               })
             }
             onDelete={() => void run(() => getContainer().processes.deleteStep(step.id))}
+            onMediaChanged={load}
+            onMediaError={setError}
+            mediaDisabled={archived}
             included={step.childProcessId ? (included[step.childProcessId] ?? null) : undefined}
             onOpenInclude={(childId) => router.push(`/process/${childId}`)}
             onInclude={() => setPickingStepId(step.id)}
@@ -354,10 +372,14 @@ function StepCard({
   step,
   index,
   total,
+  media,
+  mediaDisabled,
   included,
   onChange,
   onMove,
   onDelete,
+  onMediaChanged,
+  onMediaError,
   onOpenInclude,
   onInclude,
   onRemoveInclude,
@@ -365,11 +387,15 @@ function StepCard({
   step: Step;
   index: number;
   total: number;
+  media: MediaAsset[];
+  mediaDisabled: boolean;
   /** Undefined when this step does not include. Null when the child cannot be loaded. */
   included?: Process | null;
   onChange: (patch: Partial<Pick<Step, 'body' | 'notes' | 'kind' | 'optional' | 'url'>>) => void;
   onMove: (toIndex: number) => void;
   onDelete: () => void;
+  onMediaChanged: () => Promise<void> | void;
+  onMediaError: (message: string) => void;
   onOpenInclude: (childId: ProcessId) => void;
   onInclude: () => void;
   onRemoveInclude: () => void;
@@ -462,6 +488,15 @@ function StepCard({
           onRemove={onRemoveInclude}
         />
       ) : null}
+
+      <MediaStrip
+        processId={step.processId}
+        stepId={step.id}
+        assets={media}
+        onChanged={onMediaChanged}
+        onError={onMediaError}
+        disabled={mediaDisabled}
+      />
 
       <View style={styles.stepActions}>
         {step.kind === 'action' ? (

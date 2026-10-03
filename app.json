@@ -11,9 +11,12 @@
       "supportsTablet": true,
       "bundleIdentifier": "com.reckoner.app",
       "infoPlist": {
-        "NSFaceIDUsageDescription": "Reckoner uses Face ID to unlock the app on this device."
+        "NSFaceIDUsageDescription": "Reckoner uses Face ID to unlock the app on this device.",
+        "NSPhotoLibraryUsageDescription": "Reckoner attaches photos to your how-to steps.",
+        "NSCameraUsageDescription": "Reckoner lets you photograph a step while writing a process."
       }
     },
+
     "android": {
       "adaptiveIcon": {
         "backgroundColor": "#F5F5F4",
@@ -39,7 +42,14 @@
         }
       ],
       "expo-secure-store",
-      "expo-local-authentication"
+      "expo-local-authentication",
+      [
+        "expo-image-picker",
+        {
+          "photosPermission": "Reckoner attaches photos to your how-to steps.",
+          "cameraPermission": "Reckoner lets you photograph a step while writing a process."
+        }
+      ]
     ],
     "experiments": {
       "typedRoutes": true

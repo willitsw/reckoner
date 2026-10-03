@@ -60,6 +60,19 @@ export function createMemoryMediaRepository(deps: MemoryMediaDeps): MediaReposit
     return rankBetween(last, null);
   }
 
+  /** One cover image per process: latest write wins. */
+  function clearOtherCovers(processId: ProcessId, keepId: MediaId, timestamp: string) {
+    for (const asset of media.values()) {
+      if (asset.processId !== processId || asset.id === keepId || !asset.isCover) continue;
+      media.set(asset.id, {
+        ...asset,
+        isCover: false,
+        updatedBy: asset.ownerId,
+        updatedAt: timestamp,
+      });
+    }
+  }
+
   return {
     async listForProcess(processId) {
       const assets = [...media.values()].filter(
@@ -125,6 +138,7 @@ export function createMemoryMediaRepository(deps: MemoryMediaDeps): MediaReposit
         updatedAt: timestamp,
       };
       media.set(asset.id, asset);
+      if (isCover) clearOtherCovers(input.processId, asset.id, timestamp);
       return asset;
     },
 
@@ -135,13 +149,15 @@ export function createMemoryMediaRepository(deps: MemoryMediaDeps): MediaReposit
         throw new Error('Only an image can be cover.');
       }
 
+      const timestamp = nowIso();
       const updated: MediaAsset = {
         ...existing,
         ...patch,
         updatedBy: existing.ownerId,
-        updatedAt: nowIso(),
+        updatedAt: timestamp,
       };
       media.set(mediaId, updated);
+      if (patch.isCover === true) clearOtherCovers(existing.processId, mediaId, timestamp);
       return updated;
     },
 
