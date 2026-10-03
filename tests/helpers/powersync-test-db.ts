@@ -46,12 +46,15 @@ export async function createPowerSyncProcessRepositoryForTests(): Promise<
 /**
  * Shared process + run adapters on one local PowerSync SQLite file (same wipe/DB).
  */
-export async function createPowerSyncLibraryForTests(): Promise<RunLibrary & Closeable> {
+export async function createPowerSyncLibraryForTests(): Promise<
+  RunLibrary & { db: CommonPowerSyncDatabase } & Closeable
+> {
   const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'reckoner-ps-lib-'));
   const db = await openLocalPowerSyncDb(dir);
   return {
     processes: createPowerSyncProcessRepository({ db }),
     runs: createPowerSyncRunRepository({ db }),
+    db,
     async close() {
       await db.close();
       fs.rmSync(dir, { recursive: true, force: true });
