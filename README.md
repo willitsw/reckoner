@@ -16,7 +16,7 @@ npm start
 
 Builds and runs a native iOS app on a connected device (`npx expo run:ios --device`). Expo Go is not used — the App Store build lags the SDK in this repo. For web: `npm run web`.
 
-Sign in with email/password against **Supabase** when `.env` has keys; otherwise memory auth. Copy [`.env.example`](./.env.example) to `.env`. With `EXPO_PUBLIC_POWERSYNC_URL` plus Supabase env, the process library uses the PowerSync/SQLite adapter; otherwise memory (default in CI).
+Sign in with email/password against **Supabase** when `.env` has keys; otherwise memory auth. Copy [`.env.example`](./.env.example) to `.env`. With `EXPO_PUBLIC_POWERSYNC_URL` plus Supabase env, processes and runs use the shared PowerSync/SQLite adapter; otherwise memory (default in CI).
 
 ```bash
 npm test
