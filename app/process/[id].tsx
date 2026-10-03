@@ -229,6 +229,14 @@ export default function ProcessDetailScreen() {
           disabled={archived}
         />
 
+        {steps.length === 0 ? (
+          <Text
+            testID="process-empty-steps"
+            style={[styles.section, { color: colors.textSecondary }]}>
+            No steps yet. Add the actions you check off each time — pack, set up, tune.
+          </Text>
+        ) : null}
+
         {steps.map((step, index) => (
           <StepCard
             key={step.id}

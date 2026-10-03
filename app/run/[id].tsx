@@ -163,7 +163,9 @@ export default function RunScreen() {
         ) : null}
 
         {nodes.length === 0 ? (
-          <Text style={{ color: colors.textSecondary }}>No steps to check yet.</Text>
+          <Text testID="run-empty" style={{ color: colors.textSecondary }}>
+            Nothing to check yet — add steps on the process first (pack-out, setup, tune-up).
+          </Text>
         ) : (
           <RunNodes
             nodes={nodes}

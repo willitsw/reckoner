@@ -127,14 +127,19 @@ export default function LibraryScreen() {
         }
         ListEmptyComponent={
           <View testID="library-empty" style={styles.empty}>
-            <Text style={[styles.emptyTitle, { color: colors.text }]}>
+            <Text
+              testID="library-empty-title"
+              style={[styles.emptyTitle, { color: colors.text }]}>
               {showArchived ? 'Nothing archived' : 'No processes yet'}
             </Text>
-            <Text style={[styles.emptyBody, { color: colors.textSecondary }]}>
+            <Text
+              testID="library-empty-body"
+              style={[styles.emptyBody, { color: colors.textSecondary }]}>
               {showArchived
                 ? 'Archived processes stay out of the library. You can still include them later.'
-                : 'Create a process for a hobby workflow you repeat. Nest other processes by live reference as you go.'}
+                : 'Start with a pack-out, setup, or tune-up you already do. Nest shared steps with a live include when it helps.'}
             </Text>
+            {/* Sample seeding stays __DEV__-only for v1 (see src/dev/demo-library.ts). */}
             {__DEV__ && !showArchived ? (
               <Pressable
                 testID="library-load-demo"
@@ -148,7 +153,7 @@ export default function LibraryScreen() {
                   },
                 ]}>
                 <Text style={{ color: colors.tint, fontWeight: '600' }}>
-                  {seeding ? 'Loading demo…' : 'Load demo library'}
+                  {seeding ? 'Loading samples…' : 'Load sample processes'}
                 </Text>
               </Pressable>
             ) : null}

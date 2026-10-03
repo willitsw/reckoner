@@ -164,6 +164,13 @@ const SPECS: ProcessSpec[] = [
 
 /**
  * Seeds a realistic hobby library through the process port.
+ *
+ * Product decision (reckoner-gq3 / open question #26): **dev-only for v1**.
+ * Do not auto-seed for new accounts in production. Keep this helper behind
+ * `__DEV__` UI (library empty-state "Load sample processes") so engineers can
+ * exercise nesting, pins, and media-adjacent flows. A future onboarding CTA
+ * may offer 1–2 curated samples; that is a separate product change.
+ *
  * Safe to call from __DEV__ UI; no-ops when the owner already has live processes
  * unless `force` is set.
  */
