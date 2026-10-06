@@ -27,7 +27,7 @@ With a normal device build (Supabase from `.env`), seed the demo login first, th
 
 ```bash
 npm run seed:dev
-npm start   # or: npm run ios
+npx expo run:ios --device   # canonical iOS run (also: npm start / npm run ios)
 npm run test:e2e:maestro
 ```
 

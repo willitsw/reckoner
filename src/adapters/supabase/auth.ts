@@ -3,6 +3,7 @@ import * as Linking from 'expo-linking';
 import * as WebBrowser from 'expo-web-browser';
 import { Platform } from 'react-native';
 
+import { isUnreachableAuthError, mapAuthError } from '@/src/adapters/supabase/map-auth-error';
 import type {
   AuthCallbackResult,
   AuthEvent,
@@ -39,13 +40,6 @@ function toAuthEvent(event: AuthChangeEvent): AuthEvent {
   }
 }
 
-function mapAuthError(error: { message: string }): Error {
-  if (/invalid login credentials/i.test(error.message)) {
-    return new Error('That password does not match this account.');
-  }
-  return error instanceof Error ? error : new Error(error.message);
-}
-
 function authParams(url: string): URLSearchParams {
   const parsed = new URL(url);
   const params = new URLSearchParams(parsed.search);
@@ -55,6 +49,13 @@ function authParams(url: string): URLSearchParams {
     if (!params.has(key)) params.set(key, value);
   });
   return params;
+}
+
+function mapThrownAuthError(error: unknown): Error {
+  if (error && typeof error === 'object' && 'message' in error) {
+    return mapAuthError(error as { name?: string; message: string });
+  }
+  return new Error(String(error));
 }
 
 /**
@@ -115,28 +116,47 @@ export function createSupabaseAuthAdapter(client: SupabaseClient): AuthPort {
 
   return {
     async getSession() {
-      const { data, error } = await client.auth.getSession();
-      if (error) throw error;
-      return toAuthSession(data.session);
+      try {
+        const { data, error } = await client.auth.getSession();
+        // Unreachable backend during bootstrap should not crash the app — treat as signed out.
+        if (error) {
+          if (isUnreachableAuthError(error)) return null;
+          throw mapAuthError(error);
+        }
+        return toAuthSession(data.session);
+      } catch (e) {
+        if (e && typeof e === 'object' && isUnreachableAuthError(e as { message: string })) {
+          return null;
+        }
+        throw e instanceof Error ? mapAuthError(e) : e;
+      }
     },
 
     async signInWithPassword(email, password) {
-      const { data, error } = await client.auth.signInWithPassword({ email, password });
-      if (error) throw mapAuthError(error);
-      const session = toAuthSession(data.session);
-      if (!session) throw new Error('Sign in succeeded but no session was returned.');
-      return session;
+      try {
+        const { data, error } = await client.auth.signInWithPassword({ email, password });
+        if (error) throw mapAuthError(error);
+        const session = toAuthSession(data.session);
+        if (!session) throw new Error('Sign in succeeded but no session was returned.');
+        return session;
+      } catch (e) {
+        throw mapThrownAuthError(e);
+      }
     },
 
     async signUpWithPassword(email, password): Promise<SignUpResult> {
-      const { data, error } = await client.auth.signUp({
-        email,
-        password,
-        options: { emailRedirectTo: Linking.createURL('/') },
-      });
-      if (error) throw error;
-      if (!data.session) return { status: 'confirm-email' };
-      return { status: 'signed-in' };
+      try {
+        const { data, error } = await client.auth.signUp({
+          email,
+          password,
+          options: { emailRedirectTo: Linking.createURL('/') },
+        });
+        if (error) throw mapAuthError(error);
+        if (!data.session) return { status: 'confirm-email' };
+        return { status: 'signed-in' };
+      } catch (e) {
+        throw mapThrownAuthError(e);
+      }
     },
 
     async signInWithProvider(provider: OAuthProvider): Promise<SignInWithProviderResult> {
@@ -146,37 +166,41 @@ export function createSupabaseAuthAdapter(client: SupabaseClient): AuthPort {
       }
 
       const redirectTo = Linking.createURL('/');
-      const { data, error } = await client.auth.signInWithOAuth({
-        provider,
-        options: {
-          redirectTo,
-          skipBrowserRedirect: true,
-        },
-      });
-      if (error) return { status: 'error', message: error.message };
-      if (!data.url) return { status: 'error', message: 'Could not start sign-in.' };
+      try {
+        const { data, error } = await client.auth.signInWithOAuth({
+          provider,
+          options: {
+            redirectTo,
+            skipBrowserRedirect: true,
+          },
+        });
+        if (error) return { status: 'error', message: mapAuthError(error).message };
+        if (!data.url) return { status: 'error', message: 'Could not start sign-in.' };
 
-      const browserResult = await WebBrowser.openAuthSessionAsync(data.url, redirectTo);
-      if (browserResult.type === 'cancel' || browserResult.type === 'dismiss') {
-        return { status: 'cancelled' };
-      }
-      if (browserResult.type !== 'success' || !browserResult.url) {
-        return { status: 'error', message: 'Sign-in did not complete.' };
-      }
+        const browserResult = await WebBrowser.openAuthSessionAsync(data.url, redirectTo);
+        if (browserResult.type === 'cancel' || browserResult.type === 'dismiss') {
+          return { status: 'cancelled' };
+        }
+        if (browserResult.type !== 'success' || !browserResult.url) {
+          return { status: 'error', message: 'Sign-in did not complete.' };
+        }
 
-      return sessionFromOAuthUrl(browserResult.url);
+        return sessionFromOAuthUrl(browserResult.url);
+      } catch (e) {
+        return { status: 'error', message: mapThrownAuthError(e).message };
+      }
     },
 
     async requestPasswordReset(email) {
       const { error } = await client.auth.resetPasswordForEmail(email.trim(), {
         redirectTo: Linking.createURL('/reset-password'),
       });
-      if (error) throw error;
+      if (error) throw mapAuthError(error);
     },
 
     async reauthenticate(password) {
       const { data, error: userError } = await client.auth.getUser();
-      if (userError) throw userError;
+      if (userError) throw mapAuthError(userError);
       const email = data.user?.email;
       if (!email) throw new Error('This account has no email to confirm with.');
       const { error } = await client.auth.signInWithPassword({ email, password });

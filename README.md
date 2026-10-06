@@ -16,10 +16,10 @@ Requires **Node 18.14+** (22 recommended). This repo has an `.nvmrc`:
 ```bash
 nvm use
 npm install
-npm start
+npx expo run:ios --device
 ```
 
-Builds and runs a native iOS app on a connected device (`npx expo run:ios --device`). Expo Go is not used — the App Store build lags the SDK in this repo. For web: `npm run web`.
+That is the canonical way to run the iOS app (also available as `npm start` / `npm run ios`). It builds a native binary and launches on a selected simulator or device. Do **not** use `npx expo start` alone for iOS, and do **not** use Expo Go — the App Store client lags the SDK in this repo. After `.env` changes, re-run `npx expo run:ios --device` (or restart that process) so Metro reloads env. For web: `npm run web`.
 
 Sign in with email/password against **Supabase** when `.env` has keys; otherwise memory auth. Copy [`.env.example`](./.env.example) to `.env`. With `EXPO_PUBLIC_POWERSYNC_URL` plus Supabase env, processes and runs use the shared PowerSync/SQLite adapter; otherwise memory (default in CI).
 

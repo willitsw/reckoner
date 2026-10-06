@@ -17,7 +17,6 @@
         "NSMicrophoneUsageDescription": "Reckoner records voice notes on your how-to steps."
       }
     },
-
     "android": {
       "adaptiveIcon": {
         "backgroundColor": "#F5F5F4",
@@ -52,7 +51,7 @@
         }
       ],
       [
-        "expo-av",
+        "expo-audio",
         {
           "microphonePermission": "Reckoner records voice notes on your how-to steps."
         }

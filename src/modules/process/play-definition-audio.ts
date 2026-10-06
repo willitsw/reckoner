@@ -1,40 +1,42 @@
-import { Audio } from 'expo-av';
+import { createAudioPlayer, setAudioModeAsync } from 'expo-audio';
 
 export type DefinitionAudioPlayback = {
   stop: () => Promise<void>;
 };
 
-/** Thin Expo AV wrapper for run-screen definition audio. */
+/** Thin expo-audio wrapper for run-screen definition audio. */
 export async function playDefinitionAudio(
   uri: string,
   options?: { onFinished?: () => void },
 ): Promise<DefinitionAudioPlayback> {
-  await Audio.setAudioModeAsync({
-    allowsRecordingIOS: false,
-    playsInSilentModeIOS: true,
+  await setAudioModeAsync({
+    allowsRecording: false,
+    playsInSilentMode: true,
   });
-  const { sound } = await Audio.Sound.createAsync({ uri }, { shouldPlay: true });
+  const player = createAudioPlayer({ uri });
   let stopped = false;
 
   async function stop() {
     if (stopped) return;
     stopped = true;
     try {
-      await sound.stopAsync();
+      player.pause();
     } catch {
-      // Already stopped / unloaded.
+      // Already stopped / released.
     }
     try {
-      await sound.unloadAsync();
+      player.release();
     } catch {
       // Best-effort cleanup.
     }
   }
 
-  sound.setOnPlaybackStatusUpdate((status) => {
+  player.addListener('playbackStatusUpdate', (status) => {
     if (!status.isLoaded || !status.didJustFinish || stopped) return;
     void stop().then(() => options?.onFinished?.());
   });
+
+  player.play();
 
   return { stop };
 }

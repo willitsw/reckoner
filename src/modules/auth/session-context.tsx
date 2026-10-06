@@ -74,6 +74,10 @@ export function SessionProvider({ children }: { children: ReactNode }) {
         await new Promise((resolve) => setTimeout(resolve, 0));
         if (!alive) return;
         if (auth.consumePasswordRecovery()) setPendingPasswordReset(true);
+      } catch (e) {
+        if (!alive) return;
+        setSession(null);
+        setCallbackError(e instanceof Error ? e.message : 'Could not restore your session.');
       } finally {
         if (alive) setLoading(false);
       }

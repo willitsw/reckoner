@@ -1,3 +1,4 @@
+import FontAwesome from '@expo/vector-icons/FontAwesome';
 import { useState } from 'react';
 import {
   KeyboardAvoidingView,
@@ -23,11 +24,21 @@ const PROVIDER_LABELS: Record<OAuthProvider, string> = {
   apple: 'Continue with Apple',
 };
 
+const PROVIDER_ICONS: Record<OAuthProvider, 'google' | 'apple'> = {
+  google: 'google',
+  apple: 'apple',
+};
+
 export default function SignInScreen() {
   const colorScheme = useColorScheme();
   const colors = Colors[colorScheme];
-  const { signInWithPassword, signUpWithPassword, signInWithProvider, requestPasswordReset } =
-    useSession();
+  const {
+    signInWithPassword,
+    signUpWithPassword,
+    signInWithProvider,
+    requestPasswordReset,
+    callbackError,
+  } = useSession();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [mode, setMode] = useState<Mode>('sign-in');
@@ -126,9 +137,18 @@ export default function SignInScreen() {
                     opacity: pressed || busy ? 0.7 : 1,
                   },
                 ]}>
-                <Text style={[styles.secondaryLabel, { color: colors.text }]}>
-                  {PROVIDER_LABELS[provider]}
-                </Text>
+                <View style={styles.secondaryContent}>
+                  <FontAwesome
+                    name={PROVIDER_ICONS[provider]}
+                    size={18}
+                    color={colors.text}
+                    accessibilityElementsHidden
+                    importantForAccessibility="no"
+                  />
+                  <Text style={[styles.secondaryLabel, { color: colors.text }]}>
+                    {PROVIDER_LABELS[provider]}
+                  </Text>
+                </View>
               </Pressable>
             ))}
             <Text style={[styles.divider, { color: colors.textSecondary }]}>or use email</Text>
@@ -174,9 +194,9 @@ export default function SignInScreen() {
         ) : null}
 
         {notice ? <Text style={[styles.notice, { color: colors.text }]}>{notice}</Text> : null}
-        {error ? (
+        {error || callbackError ? (
           <Text testID="sign-in-error" style={styles.error}>
-            {error}
+            {error ?? callbackError}
           </Text>
         ) : null}
 
@@ -249,6 +269,11 @@ const styles = StyleSheet.create({
     borderRadius: 12,
     paddingVertical: 14,
     alignItems: 'center',
+  },
+  secondaryContent: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
   },
   secondaryLabel: { fontSize: 16, fontWeight: '600' },
   switchMode: { alignItems: 'center', paddingVertical: 8 },
